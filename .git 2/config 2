@@ -1,0 +1,10 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+	ignorecase = true
+	precomposeunicode = true
+[remote "heroku"]
+	url = https://git.heroku.com/lectureme.git
+	fetch = +refs/heads/*:refs/remotes/heroku/*
