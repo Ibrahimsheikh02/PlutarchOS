@@ -26,6 +26,14 @@ if os.path.exists(env_file):
     dotenv.load_dotenv(env_file)
 
 
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+AWS_STORAGE_BUCKET_NAME = 'lectureme'
+AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=86400',
+}
+AWS_DEFAULT_ACL = 'public-read'
 
 
 
@@ -54,6 +62,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django_rq",
+    "storages",
     
 ]
 
@@ -66,7 +75,8 @@ RQ_QUEUES = {
         'DB': 0,
         'PASSWORD': redis_url.password,
         'SSL': True,
-        'SSL_CERT_REQS': None
+        'SSL_CERT_REQS': None,
+        'DEFAULT_TIMEOUT': 1200,
     },
 }
 
@@ -145,6 +155,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 STATIC_URL = '/static/'
 
@@ -161,7 +172,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')   
-MEDIA_URL = '/media/'
+MEDIA_URL = 'https://%s/media/' % AWS_S3_CUSTOM_DOMAIN
 
 
 ALLOWED_HOSTS = ['.herokuapp.com', 'www.lectureme.ai', 'lectureme.ai']

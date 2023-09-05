@@ -275,13 +275,13 @@ def addLecture(request, pk):
              lecture.course = course
              lecture.save()
              if lecture.lecture_pdf:  # Check if lecture_pdf is not None
-                 pdf = lecture.lecture_pdf.path
+                 pdf = lecture.lecture_pdf
                  text = extract_text(pdf)
                  lecture.lecture_text = text
                  lecture.embeddings = create_embeddings(text)
 
              if lecture.lecture_transcript:  # Check if lecture_transcript is not None
-                 transcript = lecture.lecture_transcript.path
+                 transcript = lecture.lecture_transcript
                  t_text = extract_text(transcript)
                  lecture.transcript_text = t_text
                  lecture.transcript_embeddings = create_embeddings(t_text)
@@ -442,7 +442,7 @@ def chatbot(request, lecture_id):
             docs = embeddings.similarity_search(question, k=3)
             llm = ChatOpenAI(temperature = 0, max_tokens = 300, openai_api_key = openai_api_key, model_name = model_name)
             chain = load_qa_chain(llm = llm, chain_type = "stuff")
-            relevant_pages = find_document_pages(lecture.lecture_pdf.path, docs)
+            relevant_pages = find_document_pages(lecture.lecture_pdf, docs)
             with get_openai_callback() as cb:
                 if lecture.syllabus == True:
                     response_pdf = "\nFrom Syllabus: \n" + chain.run (input_documents = docs, question = question_context_slides) + "\n\nRelevant pages: " + relevant_pages
@@ -467,7 +467,7 @@ def chatbot(request, lecture_id):
                 transcript_docs = transcript_embeddings.similarity_search(question, k=3)
                 llm = ChatOpenAI(temperature = 0, max_tokens= 300, openai_api_key = openai_api_key, model_name = model_name)
                 chain = load_qa_chain(llm = llm, chain_type = "stuff")
-                transcript_relevant_pages = find_document_pages(lecture.lecture_transcript.path, transcript_docs)
+                transcript_relevant_pages = find_document_pages(lecture.lecture_transcript, transcript_docs)
                 with get_openai_callback() as cb:
                     response_transcript = "\n \n From Transcript: \n" + chain.run (input_documents = transcript_docs, question = question_context_transcript) + "\n\nRelevant pages: " +  transcript_relevant_pages 
                     request.user.questions_asked += 1
@@ -619,13 +619,14 @@ def get_first_two_numbers(data_list):
 
 model = 'gpt-3.5-turbo-16k'
 
-def extract_text_from_pdf(pdf_path):
-    with open(pdf_path, 'rb') as file:
-        reader = PyPDF2.PdfReader(file)
-        text = ""
-        for page_num in range(len(reader.pages)):
-            text += reader.pages[page_num].extract_text()
+def extract_text_from_pdf(pdf_file):
+    reader = PyPDF2.PdfReader(pdf_file)
+    text = ""
+    for page_num in range(len(reader.pages)):
+        text += reader.pages[page_num].extract_text()
+    pdf_file.seek(0)  # reset file pointer to the beginning
     return text
+
 
 def get_tokens(text):
     encoding = tiktoken.get_encoding("cl100k_base")
@@ -697,14 +698,15 @@ def get_final_plan (studyplan, lecture_name):
     return final_plan
 
 def save_text_to_pdf(text, file_name):
-    # Configuration for macOS
-    config = pdfkit.configuration(wkhtmltopdf='/usr/local/bin/wkhtmltopdf')
+    # Configuration for Heroku deployment
+    config = pdfkit.configuration(wkhtmltopdf='/app/bin/wkhtmltopdf')
 
     # Convert string to PDF and save to in-memory file
     pdf_bytes = pdfkit.from_string(text, False, configuration=config)  # False means don't save to a file
     pdf_buffer = BytesIO(pdf_bytes)
 
     return pdf_buffer
+
 
 #Quiz
 #Create a practice quiz 
@@ -766,8 +768,8 @@ def get_final_quiz (combined_quiz, lecture_name):
 def generate_study_plan_and_quiz (pk):
     lecture = Lecture.objects.get(id=pk)
 
-    slides = extract_text_from_pdf(lecture.lecture_pdf.path)
-    transcript = extract_text_from_pdf(lecture.lecture_transcript.path)
+    slides = extract_text_from_pdf(lecture.lecture_pdf.file)
+    transcript = extract_text_from_pdf(lecture.lecture_transcript.file)
 
     slides_chunks = chunk_text(slides)
     transcript_chunks_for_quiz = chunk_text(transcript, max_tokens=7500)
