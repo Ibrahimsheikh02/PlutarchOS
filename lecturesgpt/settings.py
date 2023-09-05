@@ -15,6 +15,7 @@ import os
 from decouple import Csv, config, Csv
 import dj_database_url
 import dotenv
+from urllib.parse import urlparse
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -55,10 +56,17 @@ INSTALLED_APPS = [
     "django_rq",
     
 ]
+
+redis_url = urlparse(os.environ.get("REDIS_URL"))
+
 RQ_QUEUES = {
     'default': {
-        'URL': os.getenv('REDIS_URL', 'redis://localhost:6379'),
-        'DEFAULT_TIMEOUT': 1200,
+        'HOST': redis_url.hostname,
+        'PORT': redis_url.port,
+        'DB': 0,
+        'PASSWORD': redis_url.password,
+        'SSL': True,
+        'SSL_CERT_REQS': None
     },
 }
 
