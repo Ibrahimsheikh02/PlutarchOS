@@ -275,13 +275,13 @@ def addLecture(request, pk):
              lecture.course = course
              lecture.save()
              if lecture.lecture_pdf:  # Check if lecture_pdf is not None
-                 pdf = lecture.lecture_pdf
+                 pdf = lecture.lecture_pdf.path
                  text = extract_text(pdf)
                  lecture.lecture_text = text
                  lecture.embeddings = create_embeddings(text)
 
              if lecture.lecture_transcript:  # Check if lecture_transcript is not None
-                 transcript = lecture.lecture_transcript
+                 transcript = lecture.lecture_transcript.path
                  t_text = extract_text(transcript)
                  lecture.transcript_text = t_text
                  lecture.transcript_embeddings = create_embeddings(t_text)
@@ -442,7 +442,7 @@ def chatbot(request, lecture_id):
             docs = embeddings.similarity_search(question, k=3)
             llm = ChatOpenAI(temperature = 0, max_tokens = 300, openai_api_key = openai_api_key, model_name = model_name)
             chain = load_qa_chain(llm = llm, chain_type = "stuff")
-            relevant_pages = find_document_pages(lecture.lecture_pdf, docs)
+            relevant_pages = find_document_pages(lecture.lecture_pdf.path, docs)
             with get_openai_callback() as cb:
                 if lecture.syllabus == True:
                     response_pdf = "\nFrom Syllabus: \n" + chain.run (input_documents = docs, question = question_context_slides) + "\n\nRelevant pages: " + relevant_pages
@@ -467,7 +467,7 @@ def chatbot(request, lecture_id):
                 transcript_docs = transcript_embeddings.similarity_search(question, k=3)
                 llm = ChatOpenAI(temperature = 0, max_tokens= 300, openai_api_key = openai_api_key, model_name = model_name)
                 chain = load_qa_chain(llm = llm, chain_type = "stuff")
-                transcript_relevant_pages = find_document_pages(lecture.lecture_transcript, transcript_docs)
+                transcript_relevant_pages = find_document_pages(lecture.lecture_transcript.path, transcript_docs)
                 with get_openai_callback() as cb:
                     response_transcript = "\n \n From Transcript: \n" + chain.run (input_documents = transcript_docs, question = question_context_transcript) + "\n\nRelevant pages: " +  transcript_relevant_pages 
                     request.user.questions_asked += 1
