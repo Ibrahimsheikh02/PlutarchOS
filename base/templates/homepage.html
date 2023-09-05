@@ -1,0 +1,400 @@
+{% extends 'main.html' %}
+
+{% block content %}
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LecturesGPT</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700;900&display=swap"
+        rel="stylesheet">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;200;300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@300;400;500;700;900&display=swap"
+        rel="stylesheet">
+
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    
+    <link rel="stylesheet" href="{% static 'css/sal.js/dist/sal.css' %}">
+    <script src="{% static 'css/sal.js/dist/sal.js' %}"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+        }
+
+        body {
+            font-family: 'Merriweather', serif;
+        }
+
+        nav {
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        .nav-link {
+            text-decoration: none;
+            color: #f7f7f7 !important;
+            padding: 10px 10px;
+            display: flex;
+            align-items: center;
+            transition: none !important;
+        }
+
+        .nav-link:hover {
+            color: #1a1b1f !important;
+        }
+
+        .nav-item {
+            padding: 5px 10px;
+        }
+
+        nav.navbar {
+            /* height: 85px; */
+            background-color: #2E2E2E;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            padding-top: 20px;
+            padding-bottom: 20px;
+        }
+
+        ul.navbar-nav {
+            margin-right: 220px;
+        }
+
+        .company-logo a {
+            background-color: whitesmoke;
+            padding: 5px 9px;
+            font-size: 13px;
+            font-weight: bold;
+            color: #2E2E2E;
+        }
+
+        .get-started a {
+            background-color: #1A1B1F;
+            border-radius: 0px;
+            padding: 12px 25px;
+            color: white;
+            font-size: 12px;
+            letter-spacing: 2px;
+        }
+
+        .get-started a:hover {
+            background-color: #32343A;
+            color: white;
+        }
+
+        .nav-links {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .nav-links .links {
+            display: flex;
+        }
+
+        section.hero {
+            min-height: 800px;
+            background-color: beige;
+            padding: 80px 30px;
+            border-bottom: 1px solid white;
+            background-image: linear-gradient(rgba(104, 52, 52, 0.37), rgba(104, 52, 52, 0.37)), url('{% static "images/background-1.png" %}');            
+            background-repeat: no-repeat;
+            background-size: cover;
+            position: relative;
+        }
+
+        .centered-subheading {
+            max-width: 600px;
+            margin-top: 90px;
+            margin-left: auto;
+            margin-right: auto;
+            margin-bottom: 80px;
+            padding-top: 0px;
+            color: rgb(0, 0, 0);
+            font-size: 35px;
+            font-family: 'Inconsolata', monospace;
+        }
+
+        .list {
+            font-size: 25px;
+            margin-left: 50px;
+            font-family: 'Montserrat', sans-serif;
+            color: black;
+            
+        }
+
+        .list li {
+            max-width: 500px;
+            margin-bottom: 70px;
+            line-height: 20px;
+        }
+
+        section.features-table {
+            padding: 80px 30px;
+            background-color: #B68888;
+            border-bottom: 1px solid white;
+        }
+
+        .features-table h2 {
+            font-size: 40px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            color: black;
+        }
+
+        .features-table p.subheading {
+            max-width: 530px;
+            margin-left: auto;
+            margin-right: auto;
+            font-size: 14px;
+            font-family: 'Montserrat', sans-serif;
+            color: black;
+        }
+
+        .comparison-table {
+            margin-top: 50px;
+            max-width: 940px;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        .comparison-table thead {
+            background-color: #5D5F63;
+            padding-top: 24px;
+            padding-bottom: 24px;
+            height: 95px;
+        }
+
+        .comparison-table thead th {
+            font-size: 24px;
+            padding-bottom: 20px;
+            padding-left: 24px;
+            color: white;
+        }
+
+        .comparison-table tbody td {
+            padding-top: 24px;
+            padding-bottom: 24px;
+            padding-left: 64px;
+        }
+
+        section.team-slider {
+            padding: 80px 30px;
+            background-color: #B68888;
+            border-bottom: 1px solid white;
+            font-family: 'Montserrat', sans-serif;
+            color: black;
+        }
+        .centered-statement {
+            font-size: 30px; /* Adjust as per your requirement */
+            color: rgb(0, 0, 0);
+            font-family: 'Inconsolata', monospace;
+            margin-top: 30px; /* Space it out a bit from the subheading */
+        }
+
+
+        section.team-slider h2 {
+            font-weight: bold;
+        }
+
+        .img-box {
+            max-width: 100%;
+            width: 600px;
+            height: 400px;
+            max-height: 100%;
+            background-color: whitesmoke;
+        }
+        .img-box img {
+            width: 100%;   /* Set image width to full container width */
+            height: 100%;  /* Set image height to full container height */
+            object-fit: cover; /* This ensures the image covers the entire element while maintaining its aspect ratio */
+        }
+
+        section.hero .img-box {
+            margin-left: 200px;
+        }
+
+        .img-grid {
+            margin-top: 94px;
+        }
+
+
+        @media only screen and (max-width: 991px) {
+            .hero-details {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            section.hero .img-box {
+                margin-left: 0;
+            }
+
+            .img-grid .img-box{
+                margin-bottom: 50px;
+            }
+        }
+    </style>
+
+
+
+
+<section class="hero">
+    <div class="container">
+        <div class="row">
+            <div 
+            data-sal="fade"
+            data-sal-easing="ease-out" 
+            style="--sal-duration: 1s; --sal-delay: 0.4s;"
+            class="col text-center">
+                <h1 style="color: #181717; font-weight: bold;">LectureMe</h1>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col text-center">
+                <div
+                data-sal="fade"
+                data-sal-easing="ease-out" 
+                style="--sal-duration: 1s; --sal-delay: 0.4s;"
+                class="centered-subheading">
+                    For those passionate to learn
+                </div>
+
+                <p class="centered-statement" 
+                data-sal="fade"
+                data-sal-easing="ease-out" 
+                style="--sal-duration: 1s; --sal-delay: 0.6s;">
+                    Question. Discuss. Learn. Repeat
+                </p>
+
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<section class="features-table">
+    <div class="container">
+        <div class="row">
+            <div class="col text-center">
+                <h2
+                data-sal="fade"
+                data-sal-easing="ease-out" 
+                style="--sal-duration: 1s; --sal-delay: 0.4s;"
+                class="centered-heading">What We Do</h2>
+
+
+                <p 
+                data-sal="fade"
+                data-sal-easing="ease-out" 
+                style="--sal-duration: 1s; --sal-delay: 0.6s;"
+                class="subheading">Our Mission: Make learning fun. <br>
+                    All your resources, in one place</p>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col d-flex justify-content-center">
+                <table
+                data-sal="fade"
+                data-sal-easing="ease-out" 
+                style="--sal-duration: 1s; --sal-delay: 0.4s;"
+                class="table comparison-table">
+                <thead>
+                    <tr>
+                        <th>Traditional LLMs</th>
+                        <th>Our LLM</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>✗ Context Specific</td>
+                        <td>✓ Context Specific</td>
+                    </tr>
+                    <tr>
+                        <td>✗ Trained on course material</td>
+                        <td>✓ Trained on course material</td>
+                    </tr>
+                    <tr>
+                        <td>✗ Understands level of knowledge required</td>
+                        <td>✓ Understands level of knowledge required</td>
+                    </tr>
+                    <tr>
+                        <td>✗ Be sure you are learning everything you need to</td>
+                        <td>✓ Be sure you are learning everything you need to</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<section class="team-slider">
+    <div class="container">
+
+        <div class="row">
+            <div
+            data-sal="fade"
+            data-sal-easing="ease-out" 
+            style="--sal-duration: 1s; --sal-delay: 0.4s;"
+            class="col text-center">
+                <h2>Example: <br>
+                    A lecture in Logistic Regression</h2>
+            </div>
+        </div>
+
+        <div
+            data-sal="fade"
+            data-sal-easing="ease-out" 
+            style="--sal-duration: 1s; --sal-delay: 0.4s;"
+            class="row justify-content-center img-grid">
+            <div class="col-lg-6 col-12 d-flex justify-content-center">
+                <div class="img-box">
+                    <img src="{% static 'images/Lectureme.png' %}" class="img-fluid">                </div>
+            </div>
+            <div class="col-lg-6 col-12 d-flex justify-content-center">
+                <div class="img-box">
+                    <img src="{% static 'images/GPT3.png' %}" class="img-fluid">                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    sal();
+</script>
+</body>
+
+</html>
+
+
+
+{% endblock content %}

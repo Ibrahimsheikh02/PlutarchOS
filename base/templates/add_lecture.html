@@ -1,0 +1,28 @@
+{% extends 'main.html' %}
+
+{% block content %}
+{% load static %}
+<link rel="stylesheet" type="text/css" href="{% static 'css/addlecturestyle.css' %}">
+
+<div id="page-content-wrapper">
+    <div class="login-form-container"> 
+        <form method='POST' enctype="multipart/form-data" action=''>
+            {% csrf_token %}
+            <div class="field-pair"> <!-- Starting the pair -->
+                {% for field in form %}
+                    <div class="field-container">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                    </div>
+                    {% if forloop.counter|divisibleby:2 and not forloop.last %}
+                        </div>
+                        <div class="field-pair">
+                    {% endif %}
+                {% endfor %}
+            </div> <!-- Closing the pair -->
+            <input type="submit" value="Submit">
+        </form>
+    </div>
+</div>
+
+{% endblock content %}

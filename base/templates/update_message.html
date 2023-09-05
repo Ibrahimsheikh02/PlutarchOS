@@ -1,0 +1,22 @@
+{% extends "main.html" %}
+
+{% block content %}
+
+
+<head>
+    <title>Edit Message</title>
+</head>
+<body>
+    <h1>Edit Message</h1>
+    
+    <form method="post" action="{% url 'updateMessage' message.id %}">
+        {% csrf_token %}
+        <label for="body">Edit Your Message:</label>
+        <textarea id="body" name="body">{{ message.body }}</textarea>
+        <input type="submit" value="Update Message">
+    </form>
+</body>
+</html>
+
+
+{% endblock content %}

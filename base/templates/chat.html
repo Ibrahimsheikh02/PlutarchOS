@@ -1,0 +1,165 @@
+{% extends 'main.html' %}
+
+{% block content %}
+
+{% load static %}
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" type="text/css" href="{% static 'css/chatstyle.css' %}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+
+<div id="page-content-wrapper">
+<div class="container">
+<div class="container" style="padding-top: 85px; padding-bottom: 0;">
+    <h2>Lecture: {{ lecture.name }}</h2>
+
+    <!-- Loading indicator -->
+
+    <!-- Chat display -->
+    <div id="chat-display">
+        {% for message in messages %}
+        {% if message.is_user %}
+            <p class="message-body"><strong>{{ message.user.username }}:</strong> {{ message.body|linebreaksbr }}</p>
+            <p class="message-body"> {{message.timestamp}}</p>
+        {% else %}
+            <p class="message-body"><strong>LectureMe:</strong> {{ message.body|linebreaksbr }}</p>
+            <p class="message-body"> {{message.timestamp}}</p>
+        {% endif %}
+        <hr>
+        {% endfor %}
+    </div>
+
+   <!-- Question form -->
+   <form method="POST" id="questionForm" action="{% url 'chatbot' lecture.id %}">
+    {% csrf_token %}
+    <div class="form-group">
+        <textarea class="form-control" id="question" name="question" rows="1" placeholder="Ask a question..."></textarea>
+        <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i></button>
+    </div>
+</form>
+
+    <div class="clear-lecture-container">
+        <!-- Clear Conversation Button -->
+        <form method="POST" id="clearForm" action="{% url 'clear_conversation' lecture.id %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-clear">Clear Conversation</button>
+        </form>
+        
+        <!-- Toggle Switch -->
+        <label class="switch">
+            <input type="checkbox" id="lectureOnlyCheckbox" name="lectureOnly">
+            <span class="slider round"></span>
+          </label>
+          <label for="lectureOnlyCheckbox">Lecture Only</label>
+
+          
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script>
+    // Include the CSRF token in AJAX request
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!this.crossDomain) {
+                xhr.setRequestHeader("X-CSRFToken", $('input[name="csrfmiddlewaretoken"]').val());
+            }
+        }
+    });
+    
+    // Automatic expansion of the textarea
+    function resizeTextarea(textarea) {
+        textarea.style.height = 'auto'; // Reset the height
+        textarea.style.height = (textarea.scrollHeight) + 'px'; // Set it to its scroll height
+    }
+    
+    $(document).ready(function() {
+        var chatDisplay = $('#chat-display');
+        chatDisplay.scrollTop(chatDisplay[0].scrollHeight);
+    
+        // Initial resize
+        resizeTextarea(document.getElementById('question'));
+    
+        // Resize when typing
+        $("#question").on('input', function() {
+            resizeTextarea(this);
+        });
+    
+        // Handle Shift + Enter for new line
+        $("#question").on('keydown', function(e) {
+            if (e.keyCode == 13 && e.shiftKey) {
+                e.preventDefault();  // Prevent default behavior
+                var content = $(this).val();
+                var caret = $(this).get(0).selectionStart;
+                $(this).val(content.substring(0, caret) + "\n" + content.substring(caret, content.length));
+                $(this).get(0).selectionStart = caret + 1;
+                $(this).get(0).selectionEnd = caret + 1;
+                $(this).trigger('input'); // Trigger input to resize textarea
+            } else if (e.keyCode == 13) {
+                e.preventDefault();
+                $("#questionForm").submit();
+            }
+        });
+    });
+    
+    var loadingIndicator = '<div id="loading"><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div></div>'; 
+    
+    $("#questionForm").submit(function(e){
+        e.preventDefault();
+    
+        var form = $(this);
+        var url = form.attr('action');
+        var question = $("#question").val();  // Get the question that the user asked
+        var formData = form.serialize();
+    
+        // Check the status of the toggle switch
+        var lectureOnlyStatus = $('#lectureOnlyCheckbox').prop('checked');  // true if checked, false if not
+        formData += "&lectureOnly=" + (lectureOnlyStatus ? "on" : "off");
+        
+        // Create timestamp
+        var currentTime = new Date();
+        var timestamp = currentTime.toLocaleString('en-US', {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: 'numeric',
+            hour12: true
+        }).replace(' at', ',');
+    
+        // Append the user's question to the chat box
+        $('#chat-display').append('<p style="color: #dfd2d2;"><strong>{{ request.user.username }}:</strong> ' + question + '</p><p style="color: #dfd2d2;">' + timestamp + '</p><hr>');
+        
+        setTimeout(() => $("#question").val(""), 0);  // Clear the input field immediately after the submit event
+    
+        $.ajax({
+            type: "POST",
+            url: url,
+            data: formData,
+            beforeSend: function(){
+                $('#chat-display').append(loadingIndicator);  // Show the loading indicator
+            },
+            success: function(data)
+            {
+                $('#loading').remove();
+                var currentTime = new Date();
+                var timestamp = currentTime.toLocaleString('en-US', {
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: 'numeric',
+                    minute: 'numeric',
+                    hour12: true
+                }).replace(' at', ',');
+    
+                var messageWithLineBreaks = data.message.replace(/(\r\n|\n|\r)/gm, '<br>');  // replace newlines with <br> tags
+                $('#chat-display').append('<p style="color: #dfd2d2;"><strong>LectureMe:</strong> ' + messageWithLineBreaks + '</p><p style="color: #dfd2d2;">' + timestamp + '</p><hr>');
+    
+                var chatDisplay = $('#chat-display');
+                chatDisplay.scrollTop(chatDisplay[0].scrollHeight);
+            }
+        });
+    });
+    </script>
+    
+<br> 
+<br>
+</div>
+</div>
+{% endblock %}

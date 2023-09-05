@@ -1,0 +1,31 @@
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #3c4042; /* Dark grey */
+    padding: 10px;
+    margin-bottom: 0px; /* remove the gap between the navbar and the line */
+}
+
+.logo h1 {
+    color: #c1bebe; /* White color */
+    font-size: 30px; /* adjust size as needed */
+}
+
+.nav-links {
+    display: flex;
+    justify-content: center;
+    flex: 1; /* this will take up the remaining space */
+    gap: 20px; /* Adjust as needed */
+}
+
+.nav-links a {
+    color: #c1bebe; /* White color */
+    text-decoration: none;
+    font-size: 30px; /* same size as logo */
+}
+
+.nav-links a:hover {
+    color: #bbbbbb; /* Light grey color on hover */
+}
+

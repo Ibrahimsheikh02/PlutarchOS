@@ -1,0 +1,18 @@
+{% extends 'main.html' %}
+
+{% block content %}
+{% load static %}
+<link rel="stylesheet" type="text/css" href="{% static 'css/enrollstyle.css' %}">
+
+<head>
+</head>
+<body>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Enroll Selected Students</button>
+    </form>
+
+
+
+{% endblock content %}

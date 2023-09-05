@@ -1,0 +1,43 @@
+
+{% load static %}
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark scroll-nav">
+    <a class="navbar-brand" href="{% url 'home' %}">
+        <img src="{% static 'images/favicon (1).png' %}" alt="Logo" width="40" height="40">
+    </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav mr-auto"> <!-- This pushes the middle menu to the right -->
+            <!-- empty, this is needed to push the middle menu to the center -->
+        </ul>
+        <ul class="navbar-nav mx-auto"> <!-- This centers the middle menu -->
+            <li class="nav-item">
+                <a class="nav-link" aria-current="page" href="{% url 'home' %}">Home</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'about' %}">About</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'coursepage' %}">Courses</a>
+            </li>
+        </ul>
+        <ul class="navbar-nav ml-auto"> <!-- This pushes the login/logout to the right -->
+            {% if request.user.is_authenticated %}
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'logout' %}">Logout</a>
+                </li>
+            {% else %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'login' %}">Login</a>
+                </li>
+            {% endif %}
+
+        </ul>
+    </div>
+</nav>
+
+
+

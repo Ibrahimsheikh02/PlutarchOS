@@ -1,0 +1,22 @@
+{% extends 'main.html' %}
+
+{% block content %}
+{% load static %}
+<link rel="stylesheet" type="text/css" href="{% static 'css/enrollmentViewStyle.css' %}">
+<br>
+<a href = "{% url 'enrollStudent' course.id %}"> Enroll Student </a>
+
+<br>
+<br>
+{% for student in enrolled %}
+<br>
+Name: {{ student.username }}
+<br>
+Email: {{ student.email }}
+<br>
+
+{% endfor %}
+
+
+
+{% endblock content %}

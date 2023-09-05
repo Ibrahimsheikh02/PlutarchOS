@@ -1,0 +1,41 @@
+{% extends 'main.html' %}
+
+{% load static %}
+
+{% block content %}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+        .pdf-viewer-wrapper {
+            margin-top: 100px; /* This value should match your navbar's height */
+            height: calc(100vh - 100px); /* Subtracting the navbar height */
+            overflow: hidden;
+        }
+        .pdf-viewer-wrapper iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+    <title>PDF Viewer</title>
+</head>
+<body>
+
+<div class="pdf-viewer-wrapper">
+    <!-- The iframe embeds the full viewer.html. The 'file' query parameter is used to specify the PDF to view. -->
+    <iframe src="{% static 'web/viewer.html' %}?file={{study_plan_path}}" style="border: none;"></iframe>
+</div>
+
+</body>
+</html>
+
+
+{% endblock content %}

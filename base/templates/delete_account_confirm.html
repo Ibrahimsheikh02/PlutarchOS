@@ -1,0 +1,16 @@
+{% extends 'main.html' %}
+
+{% block content %}
+{% load static %}
+<link rel="stylesheet" type="text/css" href="{% static 'css/deleteaccount.css' %}">
+
+<div class="delete-account-wrapper">
+    <h2>Delete Account</h2>
+    <p>Are you sure you want to delete your account? This action cannot be undone.</p>
+    <form method="post" class="delete-account-form">
+        {% csrf_token %}
+        <button type="submit" class="delete-button">Yes, delete my account</button>
+    </form>
+    <a href="{% url 'my_account' %}" class="go-back-link">Go back</a>
+</div>
+{% endblock content %}

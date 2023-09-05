@@ -1,0 +1,39 @@
+{% extends 'main.html' %}
+
+{% block content %} 
+{% load static %}
+<link rel="stylesheet" type="text/css" href="{% static 'css/myaccount.css' %}">
+<div id="myaccount">
+<h2>My Account</h2>
+<h3>Current Username: {{ request.user.username }}</h3>
+</div>
+
+<button id="showChangeUsernameForm">Change Username</button>
+
+<div id="changeUsernameForm" style="display:none;">
+    <form method="post">
+        {% csrf_token %}
+        <label>New Username:</label>
+        {{ username_form.username }}
+        <button type="submit" name="change_username">Update Username</button>
+    </form>
+</div>
+
+<h3>Change Password</h3>
+<form method="post">
+    {% csrf_token %}
+    {{ password_form.as_p }}
+    <button type="submit" name="change_password">Change Password</button>
+</form>
+
+<div id="deleteAccount">
+<a href="{% url 'delete_account' %}">Delete My Account</a>
+</div>
+
+<script>
+    document.getElementById('showChangeUsernameForm').addEventListener('click', function() {
+        document.getElementById('changeUsernameForm').style.display = 'block';
+    });
+</script>
+
+{% endblock content %}
