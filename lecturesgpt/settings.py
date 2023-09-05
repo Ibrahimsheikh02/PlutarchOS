@@ -62,7 +62,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django_rq",
-    "storages",
     
 ]
 
@@ -155,7 +154,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 
-DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
 
 STATIC_URL = '/static/'
 
@@ -172,7 +171,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')   
-MEDIA_URL = 'https://%s/media/' % AWS_S3_CUSTOM_DOMAIN
+MEDIA_URL = '/media/'
 
 
 ALLOWED_HOSTS = ['.herokuapp.com', 'www.lectureme.ai', 'lectureme.ai']

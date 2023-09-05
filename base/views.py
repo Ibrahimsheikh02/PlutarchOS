@@ -619,13 +619,14 @@ def get_first_two_numbers(data_list):
 
 model = 'gpt-3.5-turbo-16k'
 
-def extract_text_from_pdf(pdf_file):
-    reader = PyPDF2.PdfReader(pdf_file)
-    text = ""
-    for page_num in range(len(reader.pages)):
-        text += reader.pages[page_num].extract_text()
-    pdf_file.seek(0)  # reset file pointer to the beginning
+def extract_text_from_pdf(pdf_path):
+    with open(pdf_path, 'rb') as file:
+        reader = PyPDF2.PdfReader(file)
+        text = ""
+        for page_num in range(len(reader.pages)):
+            text += reader.pages[page_num].extract_text()
     return text
+
 
 
 def get_tokens(text):
@@ -768,8 +769,8 @@ def get_final_quiz (combined_quiz, lecture_name):
 def generate_study_plan_and_quiz (pk):
     lecture = Lecture.objects.get(id=pk)
 
-    slides = extract_text_from_pdf(lecture.lecture_pdf.file)
-    transcript = extract_text_from_pdf(lecture.lecture_transcript.file)
+    slides = extract_text_from_pdf(lecture.lecture_pdf.path)
+    transcript = extract_text_from_pdf(lecture.lecture_transcript.path)
 
     slides_chunks = chunk_text(slides)
     transcript_chunks_for_quiz = chunk_text(transcript, max_tokens=7500)
