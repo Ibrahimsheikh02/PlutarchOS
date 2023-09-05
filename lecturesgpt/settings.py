@@ -39,7 +39,6 @@ OPENAI_API_KEY = config('OPENAI_API_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', '') != 'True'
 
-ALLOWED_HOSTS = []
 
 AUTH_USER_MODEL = 'base.User'
 
@@ -157,7 +156,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 
 
-ALLOWED_HOSTS = ['lectureme.herokuapp.com', 'www.lectureme.ai', 'lectureme.ai']
+ALLOWED_HOSTS = ['.herokuapp.com', 'www.lectureme.ai', 'lectureme.ai']
 
 # settings.py
 
