@@ -62,11 +62,15 @@ from django.contrib.auth.decorators import login_required
 from .forms import UsernameChangeForm
 from django.contrib.auth.forms import PasswordChangeForm
 from django.conf import settings
+import boto3
+import os 
+
 
 openai.api_key = settings.OPENAI_API_KEY
 openai_api_key = settings.OPENAI_API_KEY
 openai_chat_model = "gpt-3.5-turbo"
-
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
 # Create your views here.
 
 #Home Page 
@@ -275,16 +279,22 @@ def addLecture(request, pk):
              lecture.course = course
              lecture.save()
              if lecture.lecture_pdf:  # Check if lecture_pdf is not None
-                 pdf = lecture.lecture_pdf.path
-                 text = extract_text(pdf)
-                 lecture.lecture_text = text
-                 lecture.embeddings = create_embeddings(text)
+                pdf_url = lecture.lecture_pdf.url
+                pdf_tmp_path = get_temp_file_from_s3(pdf_url)
+                text = extract_text(pdf_tmp_path)   
+
+                lecture.lecture_text = text
+                lecture.embeddings = create_embeddings(text)
+                os.remove(pdf_tmp_path)
 
              if lecture.lecture_transcript:  # Check if lecture_transcript is not None
-                 transcript = lecture.lecture_transcript.path
-                 t_text = extract_text(transcript)
-                 lecture.transcript_text = t_text
-                 lecture.transcript_embeddings = create_embeddings(t_text)
+                transcript_url = lecture.lecture_transcript.url
+                transcript_tmp_path = get_temp_file_from_s3(transcript_url)
+                t_text = extract_text(transcript_tmp_path)
+
+                lecture.transcript_text = t_text
+                lecture.transcript_embeddings = create_embeddings(t_text)
+                os.remove(transcript_tmp_path)
 
              lecture.save()
              if lecture.syllabus == False:
@@ -344,8 +354,18 @@ def editLecture(request, pk):
     return render(request, 'add_lecture.html', context)
 
     
-    
 
+
+
+def get_temp_file_from_s3(url):
+    s3 = boto3.client('s3', aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
+    bucket_name = 'lectureme'
+    key = url.split(bucket_name + '/')[1]  # Extract the key from the full S3 URL
+    
+    tmp_file_name = os.path.join('/tmp', key.split('/')[-1])  # Create a temporary path to save the file
+    s3.download_file(bucket_name, key, tmp_file_name)
+    
+    return tmp_file_name
 
 
 #Chat with LLM
@@ -442,7 +462,12 @@ def chatbot(request, lecture_id):
             docs = embeddings.similarity_search(question, k=3)
             llm = ChatOpenAI(temperature = 0, max_tokens = 300, openai_api_key = openai_api_key, model_name = model_name)
             chain = load_qa_chain(llm = llm, chain_type = "stuff")
-            relevant_pages = find_document_pages(lecture.lecture_pdf.path, docs)
+
+            pdf_url = lecture.lecture_pdf.url
+            pdf_tmp_path = get_temp_file_from_s3(pdf_url)
+            relevant_pages = find_document_pages(pdf_tmp_path, docs)
+            os.remove(pdf_tmp_path)
+
             with get_openai_callback() as cb:
                 if lecture.syllabus == True:
                     response_pdf = "\nFrom Syllabus: \n" + chain.run (input_documents = docs, question = question_context_slides) + "\n\nRelevant pages: " + relevant_pages
@@ -467,7 +492,12 @@ def chatbot(request, lecture_id):
                 transcript_docs = transcript_embeddings.similarity_search(question, k=3)
                 llm = ChatOpenAI(temperature = 0, max_tokens= 300, openai_api_key = openai_api_key, model_name = model_name)
                 chain = load_qa_chain(llm = llm, chain_type = "stuff")
-                transcript_relevant_pages = find_document_pages(lecture.lecture_transcript.path, transcript_docs)
+
+                transcript_url = lecture.lecture_transcript.url
+                transcript_tmp_path = get_temp_file_from_s3(transcript_url)
+                transcript_relevant_pages = find_document_pages(transcript_tmp_path, transcript_docs)
+                os.remove(transcript_tmp_path)
+                
                 with get_openai_callback() as cb:
                     response_transcript = "\n \n From Transcript: \n" + chain.run (input_documents = transcript_docs, question = question_context_transcript) + "\n\nRelevant pages: " +  transcript_relevant_pages 
                     request.user.questions_asked += 1
@@ -769,8 +799,16 @@ def get_final_quiz (combined_quiz, lecture_name):
 def generate_study_plan_and_quiz (pk):
     lecture = Lecture.objects.get(id=pk)
 
-    slides = extract_text_from_pdf(lecture.lecture_pdf.path)
-    transcript = extract_text_from_pdf(lecture.lecture_transcript.path)
+
+    slides_url = lecture.lecture_pdf.url
+    slides_tmp_path = get_temp_file_from_s3(slides_url)
+    slides = extract_text_from_pdf(slides_tmp_path)
+    os.remove(slides_tmp_path)
+
+    transcript_url = lecture.lecture_transcript.url
+    transcript_tmp_path = get_temp_file_from_s3(transcript_url)
+    transcript = extract_text_from_pdf(transcript_tmp_path)
+    os.remove(transcript_tmp_path)
 
     slides_chunks = chunk_text(slides)
     transcript_chunks_for_quiz = chunk_text(transcript, max_tokens=7500)
