@@ -16,13 +16,13 @@ from decouple import Csv, config, Csv
 import dj_database_url
 import dotenv
 from urllib.parse import urlparse
+DJANGO_ENV = os.environ.get('DJANGO_ENV', 'local')  # 'local' will be default if not specified
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 # Load .env file for local development
 env_file = os.path.join(BASE_DIR, '.env')
 if os.path.exists(env_file):
-
     dotenv.load_dotenv(env_file)
 
 
@@ -33,26 +33,52 @@ AWS_S3_CUSTOM_DOMAIN = '%s.s3.amazonaws.com' % AWS_STORAGE_BUCKET_NAME
 AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'max-age=86400',
 }
+AWS_LOCATION = 'media'
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+MEDIA_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, AWS_LOCATION)
+AWS_DEFAULT_ACL = None
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media') 
+SECRET_KEY = config('DJANGO_SECRET_KEY')
+OPENAI_API_KEY = config('OPENAI_API_KEY')
 
-
+AUTH_USER_MODEL = 'base.User'
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
 
+STATIC_URL = '/static/'
+STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static'),]
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-SECRET_KEY = config('DJANGO_SECRET_KEY')
-OPENAI_API_KEY = config('OPENAI_API_KEY')
+ROOT_URLCONF = "lecturesgpt.urls"
+
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DJANGO_DEBUG', '') == 'True'
 
-
-AUTH_USER_MODEL = 'base.User'
-
-# Application definition
-
-INSTALLED_APPS = [
+if DJANGO_ENV == 'local':
+    DEBUG = True
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql_psycopg2',
+            'NAME': 'mydatabase',
+            'USER': 'Ibrahim_Work',
+            'PASSWORD': 'bismillah786',
+            'HOST': 'localhost',
+            'PORT': '5432',
+        }
+    }
+    MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    ]
+    INSTALLED_APPS = [
     "base.apps.BaseConfig",
     "django.contrib.admin",
     "django.contrib.auth",
@@ -61,36 +87,71 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django_rq",
-    "storages",
+    ]
+    ALLOWED_HOSTS = ['127.0.0.1','127.0.0.1:8000', 'localhost']
+    RQ_QUEUES = {
+        'default': {
+            'HOST': 'localhost',
+            'PORT': 6379,
+            'DB': 0,
+            'DEFAULT_TIMEOUT': 1200,
+        },
+    }
+
+# Application definition
+
+if DJANGO_ENV == 'production':
+    DEBUG = False
+    INSTALLED_APPS = [
+        "base.apps.BaseConfig",
+        "django.contrib.admin",
+        "django.contrib.auth",
+        "django.contrib.contenttypes",
+        "django.contrib.sessions",
+        "django.contrib.messages",
+        "django.contrib.staticfiles",
+        "django_rq",
+        "storages",
+        
+    ]
+
+    redis_url = urlparse(os.environ.get("REDIS_URL"))
+
+    RQ_QUEUES = {
+        'default': {
+            'HOST': redis_url.hostname,
+            'PORT': redis_url.port,
+            'DB': 0,
+            'PASSWORD': redis_url.password,
+            'SSL': True,
+            'SSL_CERT_REQS': None,
+            'DEFAULT_TIMEOUT': 1200,
+        },
+    }
+
+    MIDDLEWARE = [
+        "django.middleware.security.SecurityMiddleware",
+        "django.contrib.sessions.middleware.SessionMiddleware",
+        "django.middleware.common.CommonMiddleware",
+        "django.middleware.csrf.CsrfViewMiddleware",
+        "django.contrib.auth.middleware.AuthenticationMiddleware",
+        "django.contrib.messages.middleware.MessageMiddleware",
+        "django.middleware.clickjacking.XFrameOptionsMiddleware",
+        "whitenoise.middleware.WhiteNoiseMiddleware",
+    ]
+    DATABASES = {
+    'default': 
+    dj_database_url.config(default=os.environ.get('DATABASE_URL'))
     
-]
+    }
+    ALLOWED_HOSTS = ['.herokuapp.com', 'www.lectureme.ai', 'lectureme.ai']
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
-redis_url = urlparse(os.environ.get("REDIS_URL"))
 
-RQ_QUEUES = {
-    'default': {
-        'HOST': redis_url.hostname,
-        'PORT': redis_url.port,
-        'DB': 0,
-        'PASSWORD': redis_url.password,
-        'SSL': True,
-        'SSL_CERT_REQS': None,
-        'DEFAULT_TIMEOUT': 1200,
-    },
-}
 
-MIDDLEWARE = [
-    "django.middleware.security.SecurityMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
-    "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "django.contrib.messages.middleware.MessageMiddleware",
-    "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",
-]
-
-ROOT_URLCONF = "lecturesgpt.urls"
 
 TEMPLATES = [
     {
@@ -118,11 +179,7 @@ WSGI_APPLICATION = "lecturesgpt.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES = {
-    'default': 
-dj_database_url.config(default=os.environ.get('DATABASE_URL'))
-    
-}
+
 
 
 # Password validation
@@ -153,9 +210,6 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-
-
-
 STATIC_URL = '/static/'
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
@@ -170,17 +224,6 @@ STATICFILES_DIRS = [
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-AWS_LOCATION = 'media'
-DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-MEDIA_URL = 'https://%s/%s/' % (AWS_S3_CUSTOM_DOMAIN, AWS_LOCATION)
-
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')   
-AWS_DEFAULT_ACL = None
-
-#Changed 
-
-ALLOWED_HOSTS = ['.herokuapp.com', 'www.lectureme.ai', 'lectureme.ai']
-
 # settings.py
 
 GA_MEASUREMENT_ID = 'G-2ZGPZC9TEC'
@@ -188,10 +231,3 @@ GA_MEASUREMENT_ID = 'G-2ZGPZC9TEC'
 
 #python manage.py runserver 10.17.243.47:8000
 X_FRAME_OPTIONS = 'SAMEORIGIN'
-
-
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-SECURE_SSL_REDIRECT = True
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
-

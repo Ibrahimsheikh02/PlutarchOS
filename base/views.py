@@ -63,14 +63,18 @@ from .forms import UsernameChangeForm
 from django.contrib.auth.forms import PasswordChangeForm
 from django.conf import settings
 import boto3
+from urllib.parse import quote
 import os 
+import time
 
-
+DJANGO_ENV = os.environ.get('DJANGO_ENV', 'local')
 openai.api_key = settings.OPENAI_API_KEY
 openai_api_key = settings.OPENAI_API_KEY
 openai_chat_model = "gpt-3.5-turbo"
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+s3 = boto3.client('s3')
+
 # Create your views here.
 
 #Home Page 
@@ -279,7 +283,8 @@ def addLecture(request, pk):
              lecture.course = course
              lecture.save()
              if lecture.lecture_pdf:  # Check if lecture_pdf is not None
-                pdf_url = lecture.lecture_pdf.url
+
+                pdf_url = generate_presigned_url('lectureme', lecture.lecture_pdf.name)
                 pdf_tmp_path = get_temp_file_from_s3(pdf_url)
                 text = extract_text(pdf_tmp_path)   
 
@@ -288,7 +293,7 @@ def addLecture(request, pk):
                 os.remove(pdf_tmp_path)
 
              if lecture.lecture_transcript:  # Check if lecture_transcript is not None
-                transcript_url = lecture.lecture_transcript.url
+                transcript_url = generate_presigned_url('lectureme', lecture.lecture_transcript.name)
                 transcript_tmp_path = get_temp_file_from_s3(transcript_url)
                 t_text = extract_text(transcript_tmp_path)
 
@@ -356,16 +361,23 @@ def editLecture(request, pk):
     
 
 
-
 def get_temp_file_from_s3(url):
-    s3 = boto3.client('s3', aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
+    s3 = boto3.client('s3', aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY, region_name='us-east-2')
     bucket_name = 'lectureme'
-    key = url.split(bucket_name + '/')[1]  # Extract the key from the full S3 URL
     
-    tmp_file_name = os.path.join('/tmp', key.split('/')[-1])  # Create a temporary path to save the file
+    # Update this split to handle the URL format you provided
+    key_parts = url.split('lectureme.s3.amazonaws.com/')
+    if len(key_parts) != 2:
+        raise ValueError(f"Unexpected URL format: {url}")
+    
+    # We need to split off the query parameters from the key
+    key = key_parts[1].split('?')[0]
+    
+    tmp_file_name = os.path.join('/tmp', key.split('/')[-1])
     s3.download_file(bucket_name, key, tmp_file_name)
     
     return tmp_file_name
+
 
 
 #Chat with LLM
@@ -394,6 +406,8 @@ def create_and_return_message(user, course, lecture, question_body, response_bod
 @login_required(login_url='login')
 def chatbot(request, lecture_id):
     model_name = 'gpt-3.5-turbo'
+
+    #Toggle switch: Lecture Only
     lecture_only = request.POST.get('lectureOnly')
 
 
@@ -462,12 +476,8 @@ def chatbot(request, lecture_id):
             docs = embeddings.similarity_search(question, k=3)
             llm = ChatOpenAI(temperature = 0, max_tokens = 300, openai_api_key = openai_api_key, model_name = model_name)
             chain = load_qa_chain(llm = llm, chain_type = "stuff")
-
-            pdf_url = lecture.lecture_pdf.url
-            pdf_tmp_path = get_temp_file_from_s3(pdf_url)
-            relevant_pages = find_document_pages(pdf_tmp_path, docs)
-            os.remove(pdf_tmp_path)
-
+            pdf_stream = get_pdf_from_s3('lectureme', lecture.lecture_pdf.name)
+            relevant_pages = find_document_pages(pdf_stream, docs)
             with get_openai_callback() as cb:
                 if lecture.syllabus == True:
                     response_pdf = "\nFrom Syllabus: \n" + chain.run (input_documents = docs, question = question_context_slides) + "\n\nRelevant pages: " + relevant_pages
@@ -492,12 +502,8 @@ def chatbot(request, lecture_id):
                 transcript_docs = transcript_embeddings.similarity_search(question, k=3)
                 llm = ChatOpenAI(temperature = 0, max_tokens= 300, openai_api_key = openai_api_key, model_name = model_name)
                 chain = load_qa_chain(llm = llm, chain_type = "stuff")
-
-                transcript_url = lecture.lecture_transcript.url
-                transcript_tmp_path = get_temp_file_from_s3(transcript_url)
-                transcript_relevant_pages = find_document_pages(transcript_tmp_path, transcript_docs)
-                os.remove(transcript_tmp_path)
-                
+                transcript_stream = get_pdf_from_s3('lectureme', lecture.lecture_transcript.name)
+                transcript_relevant_pages = find_document_pages(transcript_stream, transcript_docs)
                 with get_openai_callback() as cb:
                     response_transcript = "\n \n From Transcript: \n" + chain.run (input_documents = transcript_docs, question = question_context_transcript) + "\n\nRelevant pages: " +  transcript_relevant_pages 
                     request.user.questions_asked += 1
@@ -594,13 +600,17 @@ def clear_conversation(request, lecture_id):
     return redirect('chat', lecture_id=lecture_id)
 
 
-
+def get_pdf_from_s3(bucket_name, file_key):
+    file_key = 'media/' + file_key
+    s3_object = s3.get_object(Bucket=bucket_name, Key=file_key)
+    s3_file_content = s3_object['Body'].read()
+    return BytesIO(s3_file_content)
 #Finding relevant pages
 
-def find_document_pages(pdf_path, documents):
+def find_document_pages(pdf_stream, documents):
     # Step 1: Extract pages from the PDF
     pdf_pages = []
-    for page_layout in extract_pages(pdf_path):
+    for page_layout in extract_pages(pdf_stream):
         page_text = ''
         for element in page_layout:
             if isinstance(element, (LTTextBox, LTTextLine)):
@@ -729,8 +739,12 @@ def get_final_plan (studyplan, lecture_name):
     return final_plan
 
 def save_text_to_pdf(text, file_name):
+
+    if DJANGO_ENV == 'production':
     # Configuration for Heroku deployment
-    config = pdfkit.configuration(wkhtmltopdf='/app/bin/wkhtmltopdf')
+        config = pdfkit.configuration(wkhtmltopdf='/app/bin/wkhtmltopdf')
+    if DJANGO_ENV == 'local':
+        config = pdfkit.configuration(wkhtmltopdf='/usr/local/bin/wkhtmltopdf')
 
     # Convert string to PDF and save to in-memory file
     pdf_bytes = pdfkit.from_string(text, False, configuration=config)  # False means don't save to a file
@@ -772,7 +786,8 @@ def create_quiz_gpt4 (chunks, lecture_name):
         response = openai.ChatCompletion.create(model='gpt-4', messages=conversation)
         last_response = response['choices'][0]['message']['content']
         all_responses.append(last_response)
-        final_response = " ".join(all_responses)
+        
+    final_response = " ".join(all_responses)
     return final_response
 
 
@@ -799,13 +814,12 @@ def get_final_quiz (combined_quiz, lecture_name):
 def generate_study_plan_and_quiz (pk):
     lecture = Lecture.objects.get(id=pk)
 
-
-    slides_url = lecture.lecture_pdf.url
+    slides_url = generate_presigned_url('lectureme', lecture.lecture_pdf.name)
     slides_tmp_path = get_temp_file_from_s3(slides_url)
     slides = extract_text_from_pdf(slides_tmp_path)
     os.remove(slides_tmp_path)
 
-    transcript_url = lecture.lecture_transcript.url
+    transcript_url = generate_presigned_url('lectureme', lecture.lecture_transcript.name)
     transcript_tmp_path = get_temp_file_from_s3(transcript_url)
     transcript = extract_text_from_pdf(transcript_tmp_path)
     os.remove(transcript_tmp_path)
@@ -814,10 +828,9 @@ def generate_study_plan_and_quiz (pk):
     transcript_chunks_for_quiz = chunk_text(transcript, max_tokens=7500)
     transcript_chunks = chunk_text(transcript)
 
-
+    #Used GPT 4 for transcript because it was more accurate
     slides_quiz = quiz_api_call(slides_chunks, lecture.name)
     transcript_quiz = create_quiz_gpt4(transcript_chunks_for_quiz, lecture.name)
-
 
     slides_study_plan = iterative_api_calls(slides_chunks, lecture.name)
     transcript_study_plan = iterative_api_calls(transcript_chunks, lecture.name)
@@ -839,18 +852,42 @@ def generate_study_plan_and_quiz (pk):
     lecture.save()
 
 
+#AWS url security 
+
+
+def generate_presigned_url(bucket_name, object_name, expiration=3600):
+    object_name = 'media/' + object_name
+    s3_client = boto3.client('s3', region_name = 'us-east-2')
+    response = s3_client.generate_presigned_url('get_object',
+                                                Params={'Bucket': bucket_name,
+                                                        'Key': object_name},
+                                                ExpiresIn=expiration)
+    return response
+
+
+@login_required
+def get_s3_url(request, file_key):
+    if request.method == "GET":
+        url = generate_presigned_url('lectureme', file_key)
+        return JsonResponse({'url': url})
+    return JsonResponse({'error': 'Invalid Method'}, status=400)
+
 #View PDF in pdf.js
 
+@login_required(login_url='login')
 def view_study_plan(request, pk):
     lecture = Lecture.objects.get(id=pk)
-    study_plan_path = lecture.studyplan.url
-    context = {'study_plan_path': study_plan_path}
+    study_plan_path = generate_presigned_url('lectureme', lecture.studyplan.name)
+    study_plan_path_encoded = quote(study_plan_path, safe='')  # URL encode the entire S3 pre-signed URL
+    context = {'study_plan_path': study_plan_path_encoded}
     return render(request, 'studyplan_pdf.html', context)
 
+@login_required(login_url='login')
 def view_practice_quiz(request, pk):
     lecture = Lecture.objects.get(id=pk)
-    practice_quiz_path = lecture.practice_quiz.url
-    context = {'practice_quiz_path': practice_quiz_path}
+    practice_quiz_path = generate_presigned_url('lectureme', lecture.practice_quiz.name)
+    practice_quiz_path_encoded = quote(practice_quiz_path, safe='')  # URL encode the entire S3 pre-signed URL
+    context = {'practice_quiz_path': practice_quiz_path_encoded}
     return render(request, 'practicequiz_pdf.html', context)
 
 

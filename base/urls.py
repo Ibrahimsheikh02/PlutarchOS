@@ -1,6 +1,7 @@
 from django.urls import path
 from django.contrib import admin
 from . import views
+from django.urls import re_path
 
 
 urlpatterns = [
@@ -27,4 +28,5 @@ urlpatterns = [
     path ('view_practice_quiz/<int:pk>/', views.view_practice_quiz, name = 'view_practice_quiz'),
     path('my_account/', views.my_account, name='my_account'),
     path('delete_account/', views.delete_account, name='delete_account'),
+    re_path(r'^get_s3_url/(?P<file_key>.+)/$', views.get_s3_url, name='get_s3_url'),
     ]

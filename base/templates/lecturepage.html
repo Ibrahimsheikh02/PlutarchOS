@@ -142,6 +142,7 @@
             </div>
 {% endif %}
 {% if lecture.studyplan %} 
+
 <div class="logo-item">
     <a href="{% url 'view_study_plan' lecture.id %}">
     <img src='{% static "images/planIcon.png" %}'class="img-fluid">
@@ -165,14 +166,14 @@
 
 {% if lecture.syllabus %}
             <div class="logo-item">
-            <a href="{{ lecture.lecture_pdf.url }}">
+            <a href="#" onclick="fetchPresignedUrl('{{ lecture.lecture_pdf.name }}'); return false;">
             <img src='{% static "images/pic-frame.png" %}'class="img-fluid">
             </a>
             <p class="logo-caption">Syllabus</p>
             </div>
 {% else %}
             <div class="logo-item">
-                <a href="{{ lecture.lecture_pdf.url }}">
+                <a href="#" onclick="fetchPresignedUrl('{{ lecture.lecture_pdf.name }}'); return false;">
                 <img src='{% static "images/pic-frame.png" %}'class="img-fluid">
                 </a>
                 <p class="logo-caption">Slides</p>
@@ -183,7 +184,7 @@
 
 {% if lecture.lecture_transcript %}
             <div class="logo-item">
-                <a href="{{ lecture.lecture_transcript.url }}">
+                <a href="#" onclick="fetchPresignedUrl('{{ lecture.lecture_transcript.name }}'); return false;">
                 <img src='{% static "images/doc-mic.png" %}' class="img-fluid">
                 </a>
                 <p class="logo-caption">Transcript </p>
@@ -217,6 +218,26 @@
     
 
 </body>
+
+<script>
+function fetchPresignedUrl(fileKey) {
+    const endpoint = `/get_s3_url/${fileKey}/`;
+
+    fetch(endpoint)
+        .then(response => response.json())
+        .then(data => {
+            const presignedUrl = data.url;
+            const newWindow = window.open("", "_blank");  // Open a blank new tab
+            newWindow.location.href = presignedUrl;      // Navigate the new tab to the presigned URL
+        })
+        .catch(error => {
+            console.error('Error fetching presigned URL:', error);
+        });
+}
+
+</script>
+
+
 </html>
 
 
