@@ -65,7 +65,8 @@ from django.conf import settings
 import boto3
 from urllib.parse import quote
 import os 
-import time
+import requests
+from django.http import FileResponse
 
 DJANGO_ENV = os.environ.get('DJANGO_ENV', 'local')
 openai.api_key = settings.OPENAI_API_KEY
@@ -879,7 +880,7 @@ def view_study_plan(request, pk):
     lecture = Lecture.objects.get(id=pk)
     study_plan_path = generate_presigned_url('lectureme', lecture.studyplan.name)
     study_plan_path_encoded = quote(study_plan_path, safe='')  # URL encode the entire S3 pre-signed URL
-    context = {'study_plan_path': study_plan_path_encoded}
+    context = {'study_plan_path': study_plan_path_encoded, 'lecture': lecture}
     return render(request, 'studyplan_pdf.html', context)
 
 @login_required(login_url='login')
@@ -887,10 +888,22 @@ def view_practice_quiz(request, pk):
     lecture = Lecture.objects.get(id=pk)
     practice_quiz_path = generate_presigned_url('lectureme', lecture.practice_quiz.name)
     practice_quiz_path_encoded = quote(practice_quiz_path, safe='')  # URL encode the entire S3 pre-signed URL
-    context = {'practice_quiz_path': practice_quiz_path_encoded}
+    context = {'practice_quiz_path': practice_quiz_path_encoded, 'lecture': lecture}
     return render(request, 'practicequiz_pdf.html', context)
 
+@login_required(login_url='login')
+def pdf_proxy(request, file_name):
 
+    file_name = file_name
+    # Generate presigned S3 URL
+    pdf_url = generate_presigned_url('lectureme', file_name)
+
+
+    # Fetch the PDF from S3 using the pre-signed URL
+    response = requests.get(pdf_url, stream=True)
+
+    # Stream the PDF file
+    return FileResponse(response.iter_content(chunk_size=8192), content_type='application/pdf')
 
 
 #Enrollment

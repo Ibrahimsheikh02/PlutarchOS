@@ -29,4 +29,5 @@ urlpatterns = [
     path('my_account/', views.my_account, name='my_account'),
     path('delete_account/', views.delete_account, name='delete_account'),
     re_path(r'^get_s3_url/(?P<file_key>.+)/$', views.get_s3_url, name='get_s3_url'),
+    re_path(r'^pdf_proxy/(?P<file_name>.+)/$', views.pdf_proxy, name='pdf_proxy')
     ]

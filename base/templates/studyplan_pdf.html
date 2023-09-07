@@ -31,7 +31,7 @@
 
 <div class="pdf-viewer-wrapper">
     <!-- The iframe embeds the full viewer.html. The 'file' query parameter is used to specify the PDF to view. -->
-    <iframe src="{% static 'web/viewer.html' %}?file={{study_plan_path}}" style="border: none;"></iframe>
+    <iframe src="{% static 'web/viewer.html' %}?file=/pdf_proxy/{{ lecture.studyplan.name }}" style="border: none;"></iframe>
 </div>
 
 </body>
