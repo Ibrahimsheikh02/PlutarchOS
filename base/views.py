@@ -303,9 +303,9 @@ def addLecture(request, pk):
                 os.remove(transcript_tmp_path)
 
              lecture.save()
-             if lecture.syllabus == False:
+             #if lecture.syllabus == False:
                 #generate_quiz_debug.delay(pk=lecture.id)
-                generate_study_plan_and_quiz.delay(lecture.id)
+                #generate_study_plan_and_quiz.delay(lecture.id)
                 
              return redirect ('lecturepage', pk = pk)
     context = {'form': form}
@@ -477,6 +477,7 @@ def chatbot(request, lecture_id):
             docs = embeddings.similarity_search(question, k=3)
             llm = ChatOpenAI(temperature = 0, max_tokens = 300, openai_api_key = openai_api_key, model_name = model_name)
             chain = load_qa_chain(llm = llm, chain_type = "stuff")
+            #This part takes long: Maybe make it optional? (Relevant Pages)
             pdf_stream = get_pdf_from_s3('lectureme', lecture.lecture_pdf.name)
             relevant_pages = find_document_pages(pdf_stream, docs)
             with get_openai_callback() as cb:
