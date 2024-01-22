@@ -63,6 +63,8 @@ body.nav-active {
 }
 
 .get-started-btn {
+  text-decoration: none;
+  color: white; 
   font-size: 20px;
   font-weight: 700;
   line-height: 29px;
