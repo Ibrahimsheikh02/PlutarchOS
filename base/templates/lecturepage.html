@@ -1,245 +1,101 @@
 {% extends 'main.html' %}
-
-{% block content %}
 {% load static %}
-
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LecturesGPT</title>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700;900&display=swap"
-        rel="stylesheet">
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;200;300;400;500;600;700;800;900&display=swap"
-        rel="stylesheet">
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@300;400;500;700;900&display=swap"
-        rel="stylesheet">
-
-
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
-    
-    <link rel="stylesheet" href="{% static 'css/sal.js/dist/sal.css' %}">
-    <script src="{% static 'css/sal.js/dist/sal.js' %}"></script>
-
-        <style>
-            * {
-                box-sizing: border-box;
-                margin-top: 0;
-            }
-            .navbar {
-                position: relative; /* It might already have this, but if it doesn't, it's required for z-index to work */
-                z-index: 2; /* This needs to be higher than the z-index of the body::after */
-                }
-
-
-            body {
-                font-family: 'PT Serif', serif;
-                background-color: #c0c5c8; /* This is a light blue color  46b9e3 */
-                /*background-image:url('{% static "images/lightsky.png" %}'); */
-                background-repeat: no-repeat;
-                background-size: 100% auto; /* This will stretch the image to fit the entire screen. If you want to maintain aspect ratio, use 'cover' instead */
-                background-position: top-center; /* This will center the background */
-            }
-
-            body::after {
-                content: "";
-                background: rgba(151, 150, 150, 0.444); /* Black overlay with 50% opacity */
-                position: fixed;
-                top: 0;
-                right: 0;
-                bottom: 0;
-                left: 0;
-                z-index: -1; /* Sit behind content */
-                }
-
-
-            h1.heading-1 {
-                font-size: 38px;
-                font-weight: bold;
-                margin-top: 20px;
-                margin-bottom: 10px;
-            }
-
-            .course-details {
-                padding: 0px 30px;
-            }
-
-            .space-box {
-                height: 100px;
-                min-height: 80px;
-            }
-
-            .detail {
-                font-size: 25px;
-                font-weight: bold;
-                margin-top: 20px;
-            }
-
-            .logos {
-                gap: 3.5rem;
-                margin-top: 20px;
-            }
-            .logo-caption {
-                 text-align: center; /* This centers the text under the image */
-                 font-size: 25px;
-            }
-
-            .logo-item {
-                width: 100px;
-            }
-
-            @media only screen and (max-width: 991px) {
-            .logos {
-                flex-direction: column;
-                gap: 1rem;
-            }
-        }
-
-        </style>
-</head>
-<body>
-
-    <section class="course-details">
-        <h1 class="heading-1 text-center">{{courses.name}}</h1>
-        <h1 class="heading-2 text-center">Professor: {{courses.professor}}</h1>
-
-        <div class="space-box"></div>
-        {% if request.user == courses.created_by %}
-        <h1 class="heading-2 detail"> <a href =  "{% url 'addLecture' courses.id %}"> Add Lecture </a></h1>
-        {% endif %}
-
-{% for lecture in lectures %}
-{% if lecture.visible or request.user == courses.created_by %}
-
-{% if lecture.syllabus %}
-        <h1 class="heading-2 detail">{{lecture.name}}</h1>
-{% else %}
-        <h1 class="heading-2 detail">Lecture: {{lecture.name}}</h1>
-{% endif %}
-        <h1 class="heading-3 detail">Date: {{lecture.date}}</h1>
-
-{% if lecture.lecture_pdf %}
-
-        <div class="logos d-flex">
-            <div class="logo-item">
-            <a href="{% url 'chat' lecture.id %}">
-                <img src='{% static "images/chat-bubble.png" %}' class="img-fluid">
-            </a>
-                <p class="logo-caption">Chat</p>
+{% block content %}
+    <div class="lect-section">
+      <div class="container">
+        <div class="lect-main">
+          <div class="cards">
+            <div class="card-wrapper">
+              <h2>{{courses.name}}</h2>
+              <h6>{{courses.professor}}</h6>
+              <p>
+                {{courses.description}}
+              </p>
             </div>
-{% endif %}
-{% if lecture.studyplan %} 
-
-<div class="logo-item">
-    <a href="{% url 'view_study_plan' lecture.id %}">
-    <img src='{% static "images/planIcon.png" %}'class="img-fluid">
-    </a>
-    <p class="logo-caption">Study Plan</p>
+          </div>
+        </div>
+      </div>
+      <div class="container">
+        <h1 class="lect-heading">Lectures</h1>
+      </div>
+      <div class="container">
+      {% if request.user == courses.created_by %}
+        <a href="{% url 'addLecture' courses.id %}" class="lects-link">
+          <div class="lects">
+            <h6>Add Lecture</h6>
+          </div>
+        {% endif %}
+        </a>
+        {% for lecture in lectures %}
+          {% if lecture.visible or request.user == courses.created_by %}
+            <div class="lect-list">
+              <!-- Make each lecture item a clickable link -->
+              <a href="{% url 'view_lecture_content' lecture.id %}" class="lects-link">
+                <div class="lects">
+                  <h6>{{ lecture.name }}</h6>
+                  <p>{{ lecture.date }}</p>
+                </div>
+              </a>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+      
     </div>
-    
-{% endif %}
 
-{% if lecture.practice_quiz %} 
-<div class="logo-item">
-    <a href="{% url 'view_practice_quiz' lecture.id %}">
-        <img src='{% static "images/quiz_icon.png" %}' class="img-fluid">
-    </a>
-    <p class="logo-caption">Practice Quiz</p>
-</div>
-{% endif %}
-
-
-
-
-{% if lecture.syllabus %}
-            <div class="logo-item">
-            <a href="#" onclick="fetchPresignedUrl('{{ lecture.lecture_pdf.name }}'); return false;">
-            <img src='{% static "images/pic-frame.png" %}'class="img-fluid">
-            </a>
-            <p class="logo-caption">Syllabus</p>
-            </div>
-{% else %}
-            <div class="logo-item">
-                <a href="#" onclick="fetchPresignedUrl('{{ lecture.lecture_pdf.name }}'); return false;">
-                <img src='{% static "images/pic-frame.png" %}'class="img-fluid">
-                </a>
-                <p class="logo-caption">Slides</p>
-            </div>
-{% endif %}
-
-
-
-{% if lecture.lecture_transcript %}
-            <div class="logo-item">
-                <a href="#" onclick="fetchPresignedUrl('{{ lecture.lecture_transcript.name }}'); return false;">
-                <img src='{% static "images/doc-mic.png" %}' class="img-fluid">
-                </a>
-                <p class="logo-caption">Transcript </p>
-            </div>
-{% endif %}
-
-
-            {% if request.user == courses.created_by %}
-            <div class="logo-item">
-                <a href="{% url 'editLecture' lecture.id %}">
-                <img src='{% static "images/edit_icon.png" %}' class="img-fluid">
-                </a>
-                <p class="logo-caption">Edit</p>
-            </div>
-
-
-            <div class="logo-item">
-                <a href="{% url 'deleteLecture' lecture.id %}">
-                <img src='{% static "images/xicon.png" %}' class="img-fluid">
-                </a>
-                <p class="logo-caption">Delete</p>
-            </div>
-
-            {% endif %}
+    <div class="footer-section">
+      <div class="container">
+        <div class="logo-row">
+          <img
+            class="footer-logo"
+            src="{% static '/images/logo-footer.svg' %}"
+            alt="footer-logo"
+          />
+          <p>For those passionate to learn</p>
         </div>
-        {% endif %}
-    {% endfor %}
+      </div>
+      <div class="container">
+        <div class="footer-menus">
+          <nav id="footer__nav" class="footer__nav">
+            <ul>
+              <li>Home</li>
+              <li>About</li>
+              <li>Courses</li>
+            </ul>
+          </nav>
+          <div class="newsletter">
+            <div class="newsletter-heading">Subscribe to our Newsletter</div>
+            <div class="newsletter-container">
+              <input
+                type="email"
+                class="form-field"
+                placeholder="Enter your email"
+              />
+              <button class="submit-button">Get Started</button>
+            </div>
+          </div>
         </div>
-    </section>
+      </div>
+      <div class="container p-b">
+        <nav class="footer-privacy-menu">
+          <ul>
+            <li>Privacy Policy</li>
+            <li>Terms & Conditions</li>
+            <li>Credits</li>
+          </ul>
+        </nav>
+      </div>
+      <div class="container seperator">
+        <div class="footer-website-name">
+          <a>© 2023 Lecture Me </a>
+          <a>Credits</a>
+        </div>
+      </div>
+    </div>
 
-    
-
-</body>
-
-<script>
-function fetchPresignedUrl(fileKey) {
-    const endpoint = `/get_s3_url/${fileKey}/`;
-
-    fetch(endpoint)
-        .then(response => response.json())
-        .then(data => {
-            const presignedUrl = data.url;
-            const newWindow = window.open("", "_blank");  // Open a blank new tab
-            newWindow.location.href = presignedUrl;      // Navigate the new tab to the presigned URL
-        })
-        .catch(error => {
-            console.error('Error fetching presigned URL:', error);
-        });
-}
-
-</script>
-
-
+    <script src="{% static '/css/custom.js' %}"></script>
+  </body>
 </html>
-
-
+<body></body>
 
 {% endblock content %}

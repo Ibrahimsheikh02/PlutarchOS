@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect
 from django.http import HttpResponse, Http404
-from .models import Course, Message , Lecture, User, LectureChatbot, DiscussionMessages
+from .models import *
 from.forms import CourseForm, AddLecture,  EditLecture
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
@@ -63,10 +64,19 @@ from .forms import UsernameChangeForm
 from django.contrib.auth.forms import PasswordChangeForm
 from django.conf import settings
 import boto3
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
+import json
 from urllib.parse import quote
 import os 
 import requests
 from django.http import FileResponse
+import time 
+import io
+import base64
+from pdf2image import convert_from_path
+
 
 DJANGO_ENV = os.environ.get('DJANGO_ENV', 'local')
 openai.api_key = settings.OPENAI_API_KEY
@@ -75,6 +85,9 @@ openai_chat_model = "gpt-3.5-turbo"
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
 s3 = boto3.client('s3')
+
+
+
 
 # Create your views here.
 
@@ -89,22 +102,23 @@ def about (request):
     return render (request, 'about.html')
 
 
-#Authentication
+# Authentication
 def loginPage(request):
     if request.user.is_authenticated:
         return redirect('home')
 
-    if request.method == 'POST': 
-        username = request.POST.get('username').lower()
+    if request.method == 'POST':
+        email = request.POST.get('email').lower()  # Changed from username to email
         password = request.POST.get('password')
 
-        user = authenticate(request, username=username, password=password)
+        # Authenticate with email
+        user = authenticate(request, username=email, password=password)  # username parameter receives the email
 
         if user is not None:
             login(request, user)
-            return redirect('home') # or any other page you'd like to redirect to
+            return redirect('coursepage')  # or any other page you'd like to redirect to
         else:
-            messages.error(request, 'Username or Password is incorrect')
+            messages.error(request, 'Email or Password is incorrect')
 
     context = {"page": 'login'}
     return render(request, 'login.html', context)
@@ -114,29 +128,27 @@ def logoutUser(request):
     logout(request)
     return redirect('home')
 
-def signUp (request): 
+def signUp(request): 
     form = CustomUserCreationForm()
     context = {"page": 'register', "form":form}
     
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
         if form.is_valid(): 
-            form.save(commit=False)
-            user = form.save(commit = False)
-            user.username = user.username.lower()
-            user.save()
+            user = form.save()
 
+            # Assign user to a group, if necessary
             group = Group.objects.get(name='Student')
             group.user_set.add(user)
 
-            messages.success(request, 'Account was created for ' + user.username)
+            messages.success(request, 'Account was created for ' + user.email)  # Changed from username to email
             login(request, user)
-            return redirect ('home')
+            return redirect('home')
         
         else: 
-            messages.error (request, 'An error has occured during registration')
+            messages.error(request, 'An error has occurred during registration')
 
-    return render (request, 'login.html', context)
+    return render(request, 'login.html', context)
 
 #Change password, username, delete account
 @login_required(login_url='login')
@@ -181,7 +193,7 @@ def delete_account (request):
 @login_required (login_url='login')
 def coursepage (request): 
 
-    user = request.user.username.capitalize() 
+    user = request.user.email.capitalize() 
     mycourses = Course.objects.all()
     is_professor = request.user.groups.filter(name='Professor').exists()
     context = {'mycourses': mycourses, 'user':user, 'is_professor': is_professor }
@@ -359,7 +371,49 @@ def editLecture(request, pk):
     context = {'form': form}
     return render(request, 'add_lecture.html', context)
 
-    
+#GPT 4 VISION
+def encode_image(image):
+    image_buffer = io.BytesIO()
+    image.save(image_buffer, format='jpeg')
+    image_buffer.seek(0)
+    return base64.b64encode(image_buffer.getvalue()).decode('utf-8')
+
+def process_pdf(pdf_path, start_page, end_page, lecture, course):
+    images = convert_from_path(pdf_path, first_page=start_page, last_page=end_page)
+    messages = [{
+        "role": "user",
+        "content": [{
+            "type": "text",
+            "text": 
+f"""
+You are a visual PDF reader. You are given parts of a \
+lecture titled {lecture.name} in a course titled {course.name}. \
+Your job is to describe the slide by returning everything RELEVANT written on the slide or \
+explaning the illustration using the context. 
+Try to be very detailed as students will use this to understand the lecture. \
+You are given five images. Return each with description with Page Number: Description. Then new line 
+"""
+        }]
+    }]
+
+    for page_num, image in enumerate(images, start=start_page):
+        base64_image = encode_image(image)
+        image_message = {
+            "type": "image_url",
+            "image_url": {
+                "url": f"data:image/jpeg;base64,{base64_image}",
+                "detail": "high"
+            }
+        }
+        messages[0]["content"].append(image_message)
+
+    response = openai.chat.completions.create(
+        model="gpt-4-vision-preview",
+        messages=messages,
+        max_tokens=4000
+    )
+    return response
+
 
 
 def get_temp_file_from_s3(url):
@@ -379,6 +433,29 @@ def get_temp_file_from_s3(url):
     
     return tmp_file_name
 
+@login_required (login_url = 'login')
+def view_lecture_content (request, pk):
+    lecture = Lecture.objects.get (id = pk)
+    messages = Message.objects.filter(lecture=lecture, user=request.user, is_deleted = False).order_by('-timestamp')[:50][::-1]
+    slide_messages = Slide_Messages.objects.filter(lecture=lecture, user=request.user, is_deleted = False).order_by('-timestamp')[:50][::-1]
+    study_plan_path = generate_presigned_url('lectureme', lecture.studyplan.name)
+    study_plan_path_encoded = quote(study_plan_path, safe='')  # URL encode the entire S3 pre-signed URL
+    practice_quiz_path = generate_presigned_url('lectureme', lecture.practice_quiz.name)
+    practice_quiz_path_encoded = quote(practice_quiz_path, safe='')  # URL encode the entire S3 pre-signed URL
+    slides_path = generate_presigned_url('lectureme', lecture.lecture_pdf.name)
+    slides_path_encoded = quote(slides_path, safe='')  # URL encode the entire S3 pre-signed URL
+
+
+
+    context = {
+        'lecture': lecture, 
+        'messages': messages, 
+        'study_plan': study_plan_path_encoded, 
+        'practice_quiz': practice_quiz_path_encoded, 
+        'slides': slides_path_encoded, 
+        'slide_messages': slide_messages
+    } 
+    return render (request, 'lecture.html', context)
 
 
 #Chat with LLM
@@ -396,199 +473,134 @@ def chat(request, lecture_id):
 
 
 def create_and_return_message(user, course, lecture, question_body, response_body, is_user_response=True):
-    message_user = Message.objects.create(user=user, course=course, lecture=lecture, body=question_body, is_user=is_user_response)
-    message_chatbot = Message.objects.create(user=user, course=course, lecture=lecture, body=response_body, is_user=not is_user_response)
-    return JsonResponse({
-        "message": response_body,
-        "timestamp": timezone.localtime(message_chatbot.timestamp).strftime('%Y-%m-%d %H:%M:%S')
-    })
+    Message.objects.create(user=user, course=course, lecture=lecture, body=question_body, is_user=is_user_response, reply = response_body)
+
+
+@login_required(login_url='login')
+def slides_chatbot (request, lecture_id): 
+    model = 'gpt-3.5-turbo'
+    if request.method == 'POST':
+        lecture = Lecture.objects.get (id = lecture_id)
+        slides_messages = Slide_Messages.objects.filter (lecture = lecture, user = request.user, is_deleted = False).order_by('-timestamp')[:5][::-1]
+        course = Course.objects.get (lecture = lecture)
+        message_context = [{"role" : "system", "content" : "You are a course tutor"}]
+        question = request.POST.get('question')
+        for message in slides_messages:
+            message_context.append([{'role':'user', 'content': message.body}])
+            message_context.append([{'role':'system', 'content': message.reply}])
+        message_context.append ([{'role': 'user', 'content': question}])
+        slides_desciptions = lecture.slides_text
+        page_num = 3
+        slide_in_question = slides_desciptions.get(str(page_num), None)
+        slide_before_description = slides_desciptions.get(str(page_num - 1), None)
+        slide_after_description = slides_desciptions.get(str(page_num + 1), None)
+
+        message_to_send = f"""
+You are a course tutor for {course.name}. Students are chatting with you.
+Your job is to clarify lecture slides for a lecture titled {lecture.name}. 
+For context, you are provided with the user's previous interaction. 
+The question that follows can be a follow up or a new question. 
+Your job is to use the description of the slides provided to answer the question.
+The question relates to slide number {page_num}.
+For more context and if possible, you will be provided with details of the slide before 
+and after the slide in question. 
+If the user's question 
+cannot be answered through the slide descriptions provided, please say 
+"This question cannot be answered." Do not make stuff up and do not go beyond the content provided. 
+Your previous interaction with the user (you are the system in this conversation) {str(message_context)}.
+The description of the slide before: {slide_before_description}.
+The description of the slide in question: {slide_in_question}.
+The description of the slide after: {slide_after_description}.
+The user's new question: {question}. 
+Try to give short responses unless otherwise specified by the user.
+"""
+        conversation = [{"role": "user", "content": message_to_send}]
+        response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=conversation,
+        max_tokens=300
+    )
+        response = response['choices'][0]['message']['content']
+
+
+        Slide_Messages.objects.create(user=request.user, course=course, lecture=lecture, body=question, reply = response)
+        request.user.questions_asked += 1
+        return JsonResponse ({'messages': response})
+
 
 
 @login_required(login_url='login')
 def chatbot(request, lecture_id):
-    model_name = 'gpt-3.5-turbo'
-
-    #Toggle switch: Lecture Only
-    lecture_only = request.POST.get('lectureOnly')
-
+    model_name = 'gpt-4-1106-preview'
+    input_token_cost = 0.000001
+    output_token_cost= 0.000002
 
     if request.user.can_send_message == False:
-        return HttpResponse("You have exceeded your message limit. Please reach out to the administration.")
-    
+        response = 'You have exceeded the rate limit. Please contact the administration'
+        create_and_return_message(request.user, lecture.course, lecture, question, response, True)
+        messages = Message.objects.filter(lecture=lecture, user=request.user).order_by('-timestamp')[:50]
+        context = {'lecture': lecture, 'messages': messages}
+        return render(request, 'chat.html', context)
+
+
+
+
     if request.method == 'POST':
         question = request.POST.get('question')
         lecture = Lecture.objects.get(id=lecture_id)
+        course = Course.objects.get (lecture = lecture)
 
         #Building Context
         previous_messages = Message.objects.filter(lecture=lecture, user=request.user, is_deleted = False).order_by('-timestamp')[:5][::-1]
         conversation = [{"role" : "system", "content" : "You are a helpful assistant"}]
         for message in previous_messages:
-            role = "user" if message.is_user else "assistant"
+            role = "user" if message.is_user else "Assistant"
             conversation.append({"role": role, "content": message.body})
-        conversation.append({"role": "user", "content": question})
-        
-
-
-
-        if lecture.lecture_pdf is None and lecture.lecture_transcript is None: 
-            return JsonResponse({"message": "Sorry, there is no information on this topic"}, status=200)
-        
-        if lecture.lecture_pdf is None:
-            response_pdf = "" 
-
-
-        if lecture.lecture_transcript is None:
-            response_transcript = "" 
-
-
-
-    #Building context here
 
         previous_messages_content = "You are the 'Assistant' in this conversation.\n"
 
         for messages in previous_messages:
-            if messages.is_user: 
-                previous_messages_content = previous_messages_content + "User: " + messages.body + "\n"
-            else:
-                previous_messages_content = previous_messages_content + "Assistant: " + messages.body + "\n"
+            previous_messages_content = previous_messages_content + "User: " + messages.body + "\n"
+            previous_messages_content = previous_messages_content + "Assistant: " + messages.reply + "\n"
 
-
-        question_context_slides = "You are given the previous interaction. Read it carefully as the next question may be a follow up.\
-                Your previous interaction with the user: " + previous_messages_content + \
-                "\nIf the question is about the lecture, your role is to answer the user's question using ONLY the lecture slides provided.\
-                If an answer does not exist in the document (Lecture's Slides) provided, you MUST include 'sorry' in your response.\
-                Do not make stuff up and you must ensure what you say is accurate. This lecture is about {lecture.name}. \
-                Try to elaborate as much as you can. " + "\n" + "User's new question: " + question  
-
-
-        question_context_transcript = "You are given the previous interaction. Read it carefully as the next question may be a follow up. \
-                Your previous interaction with the user: " + previous_messages_content +\
-                "\nYour role is to answer the user's question using ONLY the lecture transcript provided. \
-                If an answer does not exist in the document (Lecture's Transcript) provided, you MUST include 'sorry' in your response. \
-                Do not make stuff up.This lecture is about {lecture.name}. Try to elaborate as much as you can" + "\n" + \
-                "User's new question: " + question     
-
-#"gpt-3.5-turbo-16k"
-        #PDF is provided
         if lecture.lecture_pdf is not None:
-            if lecture.syllabus == True:
-                question_context_slides = "Your previous interaction with the user: " + previous_messages_content + "\nYour role is to answer the user's question using ONLY the input provided. If an answer does not exist in the document (Class Syllabus) provided, you MUST include 'sorry' in your response. Do not make stuff up. Try to elaborate as much as you can. " + "\n" + "User's new question: " + question
             embeddings = pickle.loads(lecture.embeddings)
-            docs = embeddings.similarity_search(question, k=3)
-            llm = ChatOpenAI(temperature = 0, max_tokens = 300, openai_api_key = openai_api_key, model_name = model_name)
-            chain = load_qa_chain(llm = llm, chain_type = "stuff")
-            #This part takes long: Maybe make it optional? (Relevant Pages)
-            pdf_stream = get_pdf_from_s3('lectureme', lecture.lecture_pdf.name)
-            relevant_pages = find_document_pages(pdf_stream, docs)
-            with get_openai_callback() as cb:
-                if lecture.syllabus == True:
-                    response_pdf = "\nFrom Syllabus: \n" + chain.run (input_documents = docs, question = question_context_slides) + "\n\nRelevant pages: " + relevant_pages
-                else:
-                    response_pdf = "\nFrom Slides: \n" + chain.run (input_documents = docs, question = question_context_slides)+ "\n\nRelevant slides: " + relevant_pages 
-                request.user.questions_asked += 1
-                cost = round ( Decimal (cb.total_cost), 10 ) 
-                completion_tokens = cb.total_tokens - cb.prompt_tokens
-                request.user.question_asked_tokens += cb.prompt_tokens
-                request.user.completion_tokens += completion_tokens
-                request.user.expenditure += cost
-                request.user.total_tokens += cb.total_tokens
-                request.user.save()
+            docs = embeddings.similarity_search(question, k=6)
 
-            
+        question_context_slides = f"""
+You are a course tutor for {course.name} and you are interacting with a student. \
+This question is about a lecture titled {lecture.name}. \
+Your job is to answer the user's question by ONLY using the lecture material provided here as documents. \
+IT IS VERY IMPORTANT to ensure that you use the documents as much as possible.
+The question may be a new question or a follow up. \
+For reference, you are provided with the user's previous interaction with you. \
+Previous interaction: {previous_messages_content}. \
+The user's new question is: {question}\
+Again, please answer this question using the lecture material provided. IT IS VERY IMPORTANT. 
+"""     
+        llm = ChatOpenAI(temperature = 0, max_tokens = 500, openai_api_key = openai_api_key, 
+                         model_name = model_name, streaming=False)
+        chain = load_qa_chain(llm = llm, chain_type = "stuff")
+        response = chain.run (input_documents = docs, question = question_context_slides)
 
 
-        #Transcript is provided
-        if lecture.lecture_transcript is not None: 
-            if lecture.transcript_embeddings is not None:
-                transcript_embeddings = pickle.loads(lecture.transcript_embeddings)
-                transcript_docs = transcript_embeddings.similarity_search(question, k=3)
-                llm = ChatOpenAI(temperature = 0, max_tokens= 300, openai_api_key = openai_api_key, model_name = model_name)
-                chain = load_qa_chain(llm = llm, chain_type = "stuff")
-                transcript_stream = get_pdf_from_s3('lectureme', lecture.lecture_transcript.name)
-                transcript_relevant_pages = find_document_pages(transcript_stream, transcript_docs)
-                with get_openai_callback() as cb:
-                    response_transcript = "\n \n From Transcript: \n" + chain.run (input_documents = transcript_docs, question = question_context_transcript) + "\n\nRelevant pages: " +  transcript_relevant_pages 
-                    request.user.questions_asked += 1
-                    cost = round ( Decimal (cb.total_cost), 10 ) 
-                    completion_tokens = cb.total_tokens - cb.prompt_tokens
-                    request.user.question_asked_tokens += cb.prompt_tokens
-                    request.user.completion_tokens += completion_tokens
-                    request.user.expenditure += cost
-                    request.user.total_tokens += cb.total_tokens
-                    request.user.save()
-
-            else: 
-                response_transcript = ""
-        
-    
-
-
-
-
-
-        response = response_pdf + " " + response_transcript
-
-        #Returning if user has said they only want lecture
-        if lecture_only == 'on':
-            return create_and_return_message(request.user, lecture.course, lecture, question, response, True)
-
-
-        
-        phrases_to_check = [
-    "there is no information", 
-    "there is no specific information", 
-    "sorry", 
-    "insufficient data", 
-    "no clear question", 
-    "i don't know", 
-    "there is not enough", 
-    "there is no answer",
-    "i apologize for the inconvenience", 
-    "i apologize"
-                            ]
-        response_pdf_has_phrases = any(phrase in response_pdf.lower() for phrase in phrases_to_check)
-        response_transcript_has_phrases = any(phrase in response_transcript.lower() for phrase in phrases_to_check)
-        
-        
-        if response_pdf_has_phrases and response_transcript_has_phrases:
-            chatgpt = openai.ChatCompletion.create(
-                model = model_name,
-                messages = conversation, 
-                max_tokens = 300,
-            )
-            chatresponse = "This information is not in your lectures. But here goes: " +  chatgpt['choices'][0]['message']['content']
-            request.user.questions_asked += 1
-
-    
-
-            # Fetch and save the number of tokens used:
-            prompt_tokens = chatgpt['usage']['prompt_tokens']
-            tokens_used = chatgpt['usage']['total_tokens']
-            completion_tokens = tokens_used - prompt_tokens
-            request.user.total_tokens += tokens_used
+        with get_openai_callback() as cb:
+            cost = round ( Decimal (cb.total_cost), 10 ) 
+            print (cb.total_cost)
+            completion_tokens = cb.total_tokens - cb.prompt_tokens
+            request.user.question_asked_tokens += cb.prompt_tokens
             request.user.completion_tokens += completion_tokens
-            request.user.question_asked_tokens += prompt_tokens
-
-            # Fetch and save the cost:
-            costpertoken_prompt = 0.0000015
-            costpertoken_completion = 0.000002
-            prompt_cost = round ( Decimal (prompt_tokens * costpertoken_prompt), 10 )
-            completion_cost = round ( Decimal (completion_tokens * costpertoken_completion), 10 )
-            cost = prompt_cost + completion_cost
             request.user.expenditure += cost
+            request.user.total_tokens += cb.total_tokens
             request.user.save()
 
-            #Returning if answer was not in lecture so chat-gpt answered
-            return create_and_return_message(request.user, lecture.course, lecture, question, chatresponse, True)
-        
+        Message.objects.create(user = request.user, course = course, lecture=lecture, body=question, reply = response)
+        messages = Message.objects.filter(lecture=lecture, user=request.user, is_deleted = False).order_by('-timestamp')[:50]
+        messages = JsonResponse( { 'messages': response} )
+        context = {'lecture': lecture, 'messages': messages}
+        return messages
 
 
-        #Returning if response found in lecture: 
-        return create_and_return_message(request.user, lecture.course, lecture, question, response, True)
-
-    messages = Message.objects.filter(lecture=lecture, user=request.user).order_by('-timestamp')[:50]
-    context = {'lecture': lecture, 'messages': messages}
-    return render(request, 'chat.html', context)
 
 
 @login_required(login_url='login')
@@ -893,6 +905,25 @@ def view_practice_quiz(request, pk):
     return render(request, 'practicequiz_pdf.html', context)
 
 @login_required(login_url='login')
+def view_slides(request, pk):
+    lecture = Lecture.objects.get(id=pk)
+    slides_path = generate_presigned_url('lectureme', lecture.lecture_pdf.name)
+    slides_path_encoded = quote(slides_path, safe='')  # URL encode the entire S3 pre-signed URL
+    context = {'slides_path': slides_path_encoded, 'lecture': lecture}
+    return render(request, 'slides_pdf.html', context)
+
+
+@require_POST
+def update_page_number(request):
+    data = json.loads(request.body)
+    page_number = data.get('page')
+    print (page_number)
+    # Process the page number as needed
+
+    return JsonResponse({'status': 'success'})
+
+
+@login_required(login_url='login')
 def pdf_proxy(request, file_name):
 
     file_name = file_name
@@ -934,8 +965,4 @@ def viewEnrollment (request, pk):
     enrolled = course.enrolled.all()
     context = {'course': course, 'enrolled': enrolled}
     return render (request, 'enrollment.html', context)
-
-
-
-
 

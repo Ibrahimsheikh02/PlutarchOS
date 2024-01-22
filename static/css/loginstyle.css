@@ -1,109 +1,104 @@
-#page-content-wrapper {
-    font-family: Arial, sans-serif;
-    background-color: #868686;
+/* Specific Styles for Login Page */
+.login-page body, .login-page html {
+    font-family: 'Arial', sans-serif;
+    background-color: #ffffff;
+    color: #333;
+    line-height: 1.6;
     margin: 0;
     padding: 0;
 }
 
-.login-form-container {
+/* Flexbox Container */
+.login-page #page-content-wrapper {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    gap: 20px;
+    padding: 20px;
 }
 
-form {
-    width: 300px;
-    padding: 16px;
-    background-color: #fff;
-    box-shadow: 0px 0px 20px 0px rgba(0,0,0,0.15);
+/* Form Containers */
+.login-page .form-container {
+    flex: 1;
+    max-width: 400px;
+    margin: auto; /* Add this line to center the container */
+    background: #032e57;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 20px;
 }
 
-label {
-    display: block;
-    margin: 10px 0;
-    font-weight: bold;
-    color: #555;
+/* Form Elements */
+.login-page form {
+    display: flex;
+    flex-direction: column;
 }
 
-input[type="text"], input[type="password"] {
-    width: 80%;
+.login-page input[type="text"],
+.login-page input[type="password"],
+.login-page input[type="email"] {
     padding: 10px;
-    margin-bottom: 10px;
+    margin-bottom: 20px;
     border: 1px solid #ddd;
-    border-radius: 3px;
+    border-radius: 4px;
+    font-size: 16px;
 }
 
-input[type="submit"] {
-    display: block;
-    width: 100%;
-    padding: 10px;
+/* Larger Email Field for Login Form */
+.login-page .login-container input[type="text"],
+.login-page .login-container input[type="email"] {
+    width: 100%; /* Makes the input field take full width of the form */
+}
+
+.login-page input[type="submit"] {
+    background: #007bff;
+    color: #fff;
     border: none;
-    background-color: #007BFF;
-    color: white;
+    padding: 10px;
     cursor: pointer;
-    border-radius: 3px;
+    border-radius: 4px;
+    transition: background 0.3s ease;
 }
 
-input[type="submit"]:hover {
-    background-color: #0056b3;
+.login-page input[type="submit"]:hover {
+    background: #0056b3;
 }
 
-p {
-    text-align: center;
-    margin-top: 15px;
+.login-page label {
+    margin-bottom: 5px;
+    font-weight: bold;
 }
 
-a {
-    color: #007BFF;
+/* Error Styles */
+.login-page .error {
+    color: red;
+    font-size: 0.8em;
+    margin-bottom: 10px;
+}
+
+/* Link Styles */
+.login-page a {
+    color: #007bff;
     text-decoration: none;
 }
 
-a:hover {
+.login-page a:hover {
     text-decoration: underline;
 }
 
-
-.password-container {
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-}
-
-.password-field {
-    width: 48%; /* Adjust as needed to fit within container */
-}
-
-.password-requirements {
+/* Message and Terms Agreement */
+.login-page .messages, .login-page .terms-agreement {
+    margin-top: 20px;
     font-size: 0.9em;
-    color: #777;
-    margin-top: 10px;
-    margin-bottom: 20px;
-    padding-left: 20px;
 }
 
-input[type="text"], input[type="password"], input[type="email"] {
-    width: 80%;
-    padding: 10px;
-    margin-bottom: 10px;
-    border: 1px solid #ddd;
-    border-radius: 3px;
+/* Password Requirements */
+.login-page .password-requirements {
+    list-style: inside;
+    padding-left: 0;
+    font-size: 0.9em;
 }
 
-
-.terms-agreement {
-    font-size: 0.8em;
-    margin-bottom: 10px;
-    color: #555;
+.login-page .password-requirements li {
+    margin-bottom: 5px;
 }
-
-.terms-agreement a {
-    color: #007BFF;
-}
-
-.terms-agreement a:hover {
-    text-decoration: underline;
-}
-
-
-

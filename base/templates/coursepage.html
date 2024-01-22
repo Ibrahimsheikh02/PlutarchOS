@@ -1,226 +1,94 @@
 {% extends 'main.html' %}
 
-{% block content %}
 {% load static %}
+{% block content %}
 
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LecturesGPT</title>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700;900&display=swap"
-        rel="stylesheet">
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100;200;300;400;500;600;700;800;900&display=swap"
-        rel="stylesheet">
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inconsolata:wght@300;400;500;700;900&display=swap"
-        rel="stylesheet">
-
-
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
-    
-    <link rel="stylesheet" href="{% static 'css/sal.js/dist/sal.css' %}">
-    <script src="{% static 'css/sal.js/dist/sal.js' %}"></script>
-
-
-    
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-        }
-
-        body {
-            background-color: #7F7F7F;
-            
-        }
-        .content-wrapper {
-    padding-left: 20px; /* or your preferred value */
-}
-
-        .course a {
-            font-family: Arial, Helvetica, sans-serif;
-            font-size: 23px;
-            color: #333333;
-        }
-
-        a:hover {
-            color: #333333;
-        }
-
-
-        .img-box {
-            min-width: 168px;
-            width: 168px;
-            min-height: 168px;
-        }
-
-        h1.heading-1 {
-            font-family: 'Merriweather', serif;
-            color: #E6E6E6;
-            font-size: 38px;
-            font-weight: bold;
-            margin-top: 20px;
-            margin-bottom: 10px;
-        }
-
-        h1.heading-2 {
-            font-size: 30px;
-            color: black;
-            margin-top: 20px;
-            margin-bottom: 10px;
-            font-family: 'PT Serif', serif;
-            font-weight: bold;
-        }
-
-        h1.heading-3 {
-            margin-top: 20px;
-            margin-bottom: 10px;
-            font-size: 25px;
-            font-family: 'PT Serif', serif;
-            font-weight: bold;
-            color: #333333;
-        }
-
-
-        h1.detail {
-            font-family: 'PT Serif', serif;
-            font-size: 23px;
-            font-weight: bold;
-            color: #333333;
-            margin-top: 20px;
-        }
-        .img-box {
-    width: 200px;  /* or whatever width you desire */
-    height: 200px; /* or whatever height you desire */
-    background-color: white;
-    overflow: hidden;  /* this ensures the image doesn't spill out if it's bigger than the container */
-}
-.img-box img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-a.user-link {
-    color: black;
-    text-decoration: none;
-}
-
-a.user-link:hover {
-    text-decoration: underline;  /* Optional: if you want an underline on hover */
-}
-
-
-
-
-    </style>
-</head>
-
-<div class="content-wrapper">
-<body>
-    <h1
-    data-sal="fade"
-    data-sal-easing="ease-out" 
-    style="--sal-duration: 1s; --sal-delay: 0.4s;"
-    class="heading-1 text-center">Courses</h1>
-
-    <h1 
-    data-sal="fade"
-    data-sal-easing="ease-out" 
-    style="--sal-duration: 1s; --sal-delay: 0.4s;"
-    class="heading-2">Welcome, <a href="{% url 'my_account' %}" class="user-link">{{user}}</a></h1>
-
-    <div> 
-        {% if is_professor %}
-            <h1
-            data-sal="fade"
-            data-sal-easing="ease-out" 
-            style="--sal-duration: 1s; --sal-delay: 0.4s; color: black; "
-            class="heading-2"><a href = "{% url 'createCourse' %}" style="color: black";>Create Course</a> </h1>
-        {% endif %}
-    </div>
-
-
-    <h1
-    data-sal="fade"
-    data-sal-easing="ease-out" 
-    style="--sal-duration: 1s; --sal-delay: 0.4s;"
-    class="heading-3">Courses you are enrolled in:</h1>
-
-    <section class="courses">
-        <div
-        data-sal="fade"
-        data-sal-easing="ease-out" 
-        style="--sal-duration: 1s; --sal-delay: 0.4s;"
-        class="course mb-5">
-           
-
-        {% for course in mycourses %}
-        <div>
-            {% if request.user == course.created_by or request.user in course.enrolled.all %}
-                <div class="d-md-flex">
-                    <div class="details">
-                        <h1 class="detail">Course: {{course.name}}</h1>
-                        <h1 class="detail">Professor: {{course.professor}}</h1>
-                        <h1 class="detail">Assistants: {{course.assistants}}</h1>
-                        <h1 class="detail">Term: {{course.term}}</h1>
-                    </div>
-                    <div class="img-box ms-5">
-                        {% if course.course_image %}
-                        <img src="{{ course.course_image.url }}" alt="{{ course.name }}" class="course-image">
-
-                    {% else %}
-                        <p>No image available for this course.</p>
-                    {% endif %}
-                    </div>
-                  </div>
-                    <a href="/lecturepage/{{course.id}}">View Lectures</a>
-                </div>
-            {% endif %}
-
-            {% if request.user == course.created_by %}
-            <a href = "{% url 'updateCourse' course.id %}"> Edit | </a>  <a href = "{% url 'deleteCourse' course.id %}"> Delete </a>
-            <br>
-            <a href = "{% url 'enrollStudent' course.id %}"> Enroll |  </a> <a href = "{% url 'viewEnrollment' course.id %}"> Roster </a>
-
-
-            {% endif %}
-        
-
-        {% endfor %}
+<div class="courses-section">
+  <div class="container">
+    <h1 class="courses-heading">Courses</h1>
+  </div>
+  <div class="container">
+    {% for course in mycourses %}
+    {% if request.user == course.created_by or request.user in course.enrolled.all %}
+    <!-- Each course card is wrapped in an anchor tag -->
+    <a href="/lecturepage/{{course.id}}" class="courses-main-link">
+      <div class="courses-main">
+        <div class="cards">
+          <div class="card-wrapper">
+            <h2>{{ course.name }}</h2>
+            <h6>{{ course.professor }}</h6>
+            <p>
+              {% if course.description %}
+                {{ course.description }}
+              {% else %}
+                Description not available.
+              {% endif %}
+            </p>
+            <span>{{ course.term }}</span>
+          </div>
         </div>
+      </div>
+    </a>
+    {% endif %}
+    {% endfor %}
+  </div>
+</div>
 
+
+
+    <div class="footer-section">
+      <div class="container">
+        <div class="logo-row">
+          <img
+            class="footer-logo"
+            src="{% static 'images/logo-footer.svg' %}"
+            alt="footer-logo"
+          />
+          <p>For those passionate to learn</p>
+        </div>
+      </div>
+      <div class="container">
+        <div class="footer-menus">
+          <nav id="footer__nav" class="footer__nav">
+            <ul>
+              <li><a>Home</a></li>
+              <li><a>About</a></li>
+              <li><a>Courses</a></li>
+            </ul>
+          </nav>
+          <div class="newsletter">
+            <div class="newsletter-heading">Subscribe to our Newsletter</div>
+            <div class="newsletter-container">
+              <input
+                type="email"
+                class="form-field"
+                placeholder="Enter your email"
+              />
+              <button class="submit-button">Get Started</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="container p-b">
+        <nav class="footer-privacy-menu">
+          <ul>
+            <li><a>Privacy Policy</a></li>
+            <li><a>Terms & Conditions</li>
+            <li><a>Credits</a></li>
+          </ul>
+        </nav>
+      </div>
+      <div class="container seperator">
+        <div class="footer-website-name">
+          <a>© 2023 Lecture Me </a>
+          <a>Credits</a>
+        </div>
+      </div>
     </div>
 
-
-
-
-    </section>
-
-
-    <script>
-        sal();
-    </script>
-</body>
-
+    <script src="{% static '/css/custom.js' %}"></script>
+  </body>
 </html>
-
-
-
-
-</head>
+<body></body>
 
 {% endblock content %}

@@ -3,99 +3,97 @@
 {% block content %} 
 {% load static %}
 <link rel="stylesheet" type="text/css" href="{% static 'css/loginstyle.css' %}">
-
-<div id="page-content-wrapper">
-    <div class="login-form-container"> 
+<div class="login-page">
+    <div id="page-content-wrapper">
         {% if page == 'login' %}
-            <form method="POST" action="">
-                {% csrf_token %}
-        
-                <label>Username: </label>
-                <input type="text" name="username" placeholder="Username">
-        
-                <label>Password: </label>
-                <input type="password" name="password" placeholder="Password">
-        
-                <input type="submit" value="Submit">
+            <div class="form-container login-container">
+                <form method="POST" action="">
+                    {% csrf_token %}
+            
+                    <label>Email: </label>
+                    <input type="text" name="email" placeholder="Email">
+            
+                    <label>Password: </label>
+                    <input type="password" name="password" placeholder="Password">
+            
+                    <input type="submit" value="Submit">
 
-                <!-- Only display messages tagged with 'error' -->
-                {% if messages %}
-                    <ul class="messages">
-                        {% for message in messages %}
-                            {% if message.tags == 'error' and message.message == "Username or Password is incorrect" %}
-                                <li class="{{ message.tags }}">{{ message }}</li>
-                            {% endif %}
-                        {% endfor %}
-                    </ul>
-                {% endif %}
-                </form>
-
-
-            <p> 
-                Don't have an account? 
-                <br>
-                <a href="{% url 'register' %}">Register</a>
-            </p>
-
-        {% else %}
-            <form method="POST" action="">
-                {% csrf_token %}
-                
-                <label for="{{ form.username.id_for_label }}">Username:</label>
-                {{ form.username }}
-                {% if form.username.errors %}
-                    <div class="error">{{ form.username.errors.as_text }}</div>
-                {% endif %}
-                
-                <label for="{{ form.email.id_for_label }}">Email:</label>
-                {{ form.email }}
-                {% if form.email.errors %}
-                    <div class="error">{{ form.email.errors.as_text }}</div>
-                {% endif %}
-                
-                <label for="{{ form.password1.id_for_label }}">Password:</label>
-                {{ form.password1 }}
-                {% if form.password1.errors %}
-                    <div class="error">{{ form.password1.errors.as_text }}</div>
-                {% endif %}
-                
-                <label for="{{ form.password2.id_for_label }}">Confirm Password:</label>
-                {{ form.password2 }}
-                {% if form.password2.errors %}
-                    <div class="error">{{ form.password2.errors.as_text }}</div>
-                {% endif %}
-                
-                <ul class="password-requirements">
-                    <li>At least 8 characters.</li>
-                    <li>At least one capital letter and one number.</li>
-                    <li>Not entirely numeric.</li>
-                    <li>Not similar to the username.</li>
-                    <li>Not a commonly used password.</li>
-                    
-
-                    {% if form.errors %}
-                        <ul class="errors">
-                            {% for field, error in form.errors.items %}
-                                <li><strong>{{ field|capfirst }}</strong>: {{ error|first }}</li>
+                    {% if messages %}
+                        <ul class="messages">
+                            {% for message in messages %}
+                                {% if message.tags == 'error' and message.message == "Username or Password is incorrect" %}
+                                    <li class="{{ message.tags }}">{{ message }}</li>
+                                {% endif %}
                             {% endfor %}
                         </ul>
                     {% endif %}
-                </ul>
+                </form>
 
-                <p class="terms-agreement">
-                    By clicking Submit, you agree to our <a href="/media/TermsofService/TermsOfService_pdf.pdf" target="_blank">terms of services</a>.
+                <p> 
+                    Don't have an account? 
+                    <br>
+                    <a href="{% url 'register' %}">Register</a>
                 </p>
+            </div>
+        {% else %}
+            <div class="form-container register-container">
+                <form method="POST" action="">
+                    {% csrf_token %}
+                    
+                    <label for="{{ form.first_name.id_for_label }}">First Name:</label>
+                    {{ form.first_name }}
+                    {% if form.first_name.errors %}
+                        <div class="error">{{ form.first_name.errors.as_text }}</div>
+                    {% endif %}
 
-                <input type="submit" value="Register">
-            </form>
-            
-            <p>
-                Already have an account?
-                <br>
-                <a href="{% url 'login' %}">Login</a>
-            </p>
-        </div>
+                    <label for="{{ form.last_name.id_for_label }}">Last Name:</label>
+                    {{ form.last_name }}
+                    {% if form.last_name.errors %}
+                        <div class="error">{{ form.last_name.errors.as_text }}</div>
+                    {% endif %}
+                    
+                    <label for="{{ form.email.id_for_label }}">Email:</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                        <div class="error">{{ form.email.errors.as_text }}</div>
+                    {% endif %}
+                    
+                    <label for="{{ form.password1.id_for_label }}">Password:</label>
+                    {{ form.password1 }}
+                    {% if form.password1.errors %}
+                        <div class="error">{{ form.password1.errors.as_text }}</div>
+                    {% endif %}
+                    
+                    <label for="{{ form.password2.id_for_label }}">Confirm Password:</label>
+                    {{ form.password2 }}
+                    {% if form.password2.errors %}
+                        <div class="error">{{ form.password2.errors.as_text }}</div>
+                    {% endif %}
+                        
+                    <ul class="password-requirements">
+                        <li>At least 8 characters.</li>
+                        <li>At least one capital letter and one number.</li>
+                        <li>Not entirely numeric.</li>
+                        <li>Not similar to the username.</li>
+                        <li>Not a commonly used password.</li>
+                    </ul>
+
+                    <p class="terms-agreement">
+                        By clicking Submit, you agree to our <a href="/media/TermsofService/TermsOfService_pdf.pdf" target="_blank">terms of services</a>.
+                    </p>
+
+                    <input type="submit" value="Register">
+                </form>
+                
+                <p>
+                    Already have an account?
+                    <br>
+                    <a href="{% url 'login' %}">Login</a>
+                </p>
+            </div>
         {% endif %}
     </div>
 </div>
 {% endblock content %}
+
+

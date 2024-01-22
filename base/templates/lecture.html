@@ -1,0 +1,353 @@
+{% extends 'main.html' %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+
+{% load static %}
+{% block content %}
+<link rel="stylesheet" href="{% static 'css/lecture.css' %}" />
+    <div class="site-wrapper">
+      <section class="tabs-wrapper">
+        <div class="tabs-container">
+          <div class="tabs-block">
+            <div id="tabs-section" class="tabs">
+              <ul class="tab-head">
+                <li>
+                  <a class="tab-heading"
+                    >{{lecture.name}}
+                    <p>{{lecture.date}}</p></a
+                  >
+                </li>
+                <li>
+                  <a href="#tab-1" class="tab-link active">
+                    <span class="tab-icon"
+                      ><img src="{% static '/images/chatt.svg' %}"
+                    /></span>
+                    <span class="tab-label">Chat</span></a
+                  >
+                </li>
+                {% if lecture.studyplan %}
+                <li>
+                  <a href="#tab-2" class="tab-link">
+                    <span class="tab-icon"
+                      ><img src="{% static '/images/study-plan.svg' %}"
+                    /></span>
+                    <span class="tab-label">Study Plan</span></a
+                  >
+                </li>
+                {% endif %}
+                {% if lecture.practice_quiz %}
+                <li>
+                  <a href="#tab-3" class="tab-link">
+                    <span class="tab-icon"
+                      ><img src="{% static '/images/quixx.svg' %}"
+                    /></span>
+                    <span class="tab-label">Practice Quiz</span></a
+                  >
+                </li>
+                {% endif %}
+                {% if lecture.lecture_pdf %}
+                <li>
+                  <a href="#tab-4" class="tab-link">
+                    <span class="tab-icon"
+                      ><img src="{% static '/images/slides.svg' %}"
+                    /></span>
+                    <span class="tab-label">Slides</span></a
+                  >
+                </li>
+                {% endif %}
+                {% if lecture.lecture_transcript %}
+                <li>
+                  <a href="#tab-5" class="tab-link">
+                    <span class="tab-icon"
+                      ><img src="{% static '/images/transcript.svg' %}"
+                    /></span>
+                    <span class="tab-label">Transcript</span></a
+                  >
+                </li>
+                {% endif %}
+                <li class="last-tab">
+                  <img class="hidden-img" src= "{% static '/images/back-small.svg' %}"/>
+                  <a class="tab-back-page"
+                    ><img src="{% static '/images/back-btn.svg' %}" />Back to Lectures</a
+                  >
+                </li>
+              </ul>
+
+              <section id="tab-1" class="tab-body entry-content active active-content">
+                <a class="hidden-text">{{lecture.name}}
+                    <p>{{lecture.date}}</p>
+                </a>
+                <div class="chat-box">
+                    <div class="messages-container">
+                        {% for message in messages %}
+                        <div class="message-pair">
+                            <p class="user-message">{{ message.body|linebreaksbr }} </p>
+                            <p class="api-response">{{ message.reply|linebreaksbr }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="loader" style="display: none;"></div>
+                    
+                    <!-- Chat form at the bottom of chat-box -->
+                    <form method="POST" id="chatForm" action="{% url 'chatbot' lecture.id %}">
+                        {% csrf_token %}
+                        <div class="chatbox-container">
+                            <textarea class="form-field" id="chatBoxInput" name="question" rows="1" placeholder="Message Plutarch"></textarea>
+                            <button type="submit" class="chat-button">
+                                <img src="{% static '/images/chat-icon.svg' %}" />
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </section>
+            
+
+              {% if lecture.studyplan %}
+              <section id="tab-2" class="tab-body entry-content">
+                <div class="pdf-viewer-wrapper">
+                  <iframe src="{% static 'web/viewer.html' %}?file=/pdf_proxy/{{ lecture.studyplan.name }}" style="border: none;"></iframe>
+                </div>
+              </section>
+              {% endif %}
+              {% if lecture.practice_quiz %}
+              <section id="tab-3" class="tab-body entry-content">
+                <div class="pdf-viewer-wrapper">
+                  <iframe src="{% static 'web/viewer.html' %}?file=/pdf_proxy/{{ lecture.practice_quiz.name }}" style="border: none;"></iframe>
+                </section>
+              {% endif %}
+
+              <section id="tab-4" class="tab-body entry-content">
+                <div class="pdf-viewer-wrapper">
+                  <iframe src="{% static 'web/viewer.html' %}?file=/pdf_proxy/{{ lecture.lecture_pdf.name }}" style="border: none;"></iframe>
+                </div>
+                <div class="floating-chat">
+                  <i class="fa fa-comments" aria-hidden="true"></i>
+                  <div class="chat">
+                    <div class="header">
+                      <span class="title">Plutarch</span>
+                      <button>
+                        <i class="fa fa-times" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                    <form method="post" id="floatingChat" action="{% url 'slides_chatbot' lecture.id %}">
+                      {% csrf_token %}
+                      
+                      <ul class="floating-chat-messages">
+                        {% for message in slide_messages %}
+                        <li class="self">{{message.body}}</li>
+                        <li class="other">{{message.reply}}</li>
+                        {% endfor %}
+                      </ul>
+                      <div class="loader" style="display: none;"></div>
+                      
+                      <div class="footer">
+                        <div class="text-box" contenteditable="true" disabled="true"></div>
+                        <button type="submit" id="sendMessage">send</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </section>
+              
+
+              <section id="tab-5" class="tab-body entry-content">
+                <div class="pdf-viewer-wrapper">
+                  <iframe src="{% static 'web/viewer.html' %}?file=/pdf_proxy/{{ lecture.lecture_pdf.name }}" style="border: none;"></iframe>
+              </section>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    
+    
+    <script src="{% static '/css/custom.js' %}"></script>
+  </body>
+</html>
+
+
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script>
+    $(document).ready(function() {
+        var chatBoxInput = $('#chatBoxInput');
+        var chatBoxContainer = $('.chat-box');
+        var messagesContainer = $('.messages-container');
+
+        function scrollToBottom() {
+        messagesContainer.scrollTop(messagesContainer.prop("scrollHeight"));
+    }
+    
+
+
+        // Resize function for textarea
+        function resizeTextarea(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = (textarea.scrollHeight) + 'px';
+        }
+        
+
+        // Initial and dynamic resize of textarea
+        resizeTextarea(chatBoxInput.get(0));
+        chatBoxInput.on('input', function() {
+            resizeTextarea(this);
+        });
+        scrollToBottom();
+
+        // Handling Enter key for message send and Shift+Enter for new line
+        chatBoxInput.on('keydown', function(e) {
+            if (e.keyCode == 13 && e.shiftKey) {
+                e.preventDefault();
+                // Logic for new line
+                var startPos = this.selectionStart;
+                var endPos = this.selectionEnd;
+                $(this).val($(this).val().substring(0, startPos)  + $(this).val().substring(endPos));
+                this.selectionStart = this.selectionEnd = startPos + 1;
+                resizeTextarea(this);
+            } else if (e.keyCode == 13) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Send message function
+        function sendMessage() {
+            var message = chatBoxInput.val().trim();
+            if (!message) return;
+
+            // Creating a container for both user message and API response
+            var messagePair = $('<div class="message-pair"></div>');
+            $('.loader').show();
+
+            // Append user message to the message pair container
+            var user_message_with_br = message.replace(/(\r\n|\n|\r)/gm, '<br>');
+            var userMessageHtml = '<p class="user-message">' + user_message_with_br + '</p>';
+            messagePair.append(userMessageHtml);
+            
+            // Append the message pair container to the messages container
+            $('.messages-container').append(messagePair);
+
+            setTimeout(scrollToBottom, 100);
+
+            // AJAX call for the API response
+            var csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
+            var formData = {
+                'csrfmiddlewaretoken': csrfToken,
+                'question': message
+            };
+
+    $.ajax({
+        type: "POST",
+        url: "{% url 'chatbot' lecture.id %}", // Correct URL
+        data: formData,
+        success: function(response) {
+            $('.loader').hide();
+            var api_response = response.messages
+            var api_response = api_response.replace(/(\r\n|\n|\r)/gm, '<br>');
+            var api_response = api_response.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+            var replyHtml = '<p class="api-response"> ' + api_response + '</p>';
+          
+            messagePair.append(replyHtml); // Append API response to the same message pair container
+            chatBoxContainer.scrollTop(chatBoxContainer.prop("scrollHeight"));
+            scrollToBottom();
+        },
+        error: function(xhr, status, error) {
+            console.error("Error in sending message: " + error);
+        }
+    });
+
+    chatBoxInput.val('');
+    resizeTextarea(chatBoxInput.get(0));
+    chatBoxContainer.scrollTop(chatBoxContainer.prop("scrollHeight"));
+}
+
+
+        // Click event for the send button
+        $('.chat-button').click(sendMessage);
+    });
+</script>
+
+
+
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script>
+    $(document).ready(function() {
+      var chatBox = $('#tab-4 .floating-chat'); // Scope everything to this specific chat box
+      var chatBoxInput = chatBox.find('.text-box'); // More specific selector
+      var messagesContainer = chatBox.find('.floating-chat-messages'); // More specific selector
+
+
+        function scrollToBottom() {
+            messagesContainer.scrollTop(messagesContainer.prop("scrollHeight"));
+        }
+
+        // Handling Enter key for message send
+        chatBoxInput.on('keydown', function(e) {
+            if (e.keyCode == 13 && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        scrollToBottom; 
+    function sendMessage() {
+        var message = chatBoxInput.text().trim();
+        if (!message) return;
+
+        var userMessageHtml = '<li class="self">' + message + '</li>';
+        messagesContainer.append(userMessageHtml);
+        $('.loader').show();
+        scrollToBottom();
+
+        // AJAX call
+        var csrfToken = chatBox.find('input[name="csrfmiddlewaretoken"]').val();
+        var formData = {
+            'csrfmiddlewaretoken': csrfToken,
+            'question': message
+        };
+
+        $.ajax({
+            type: "POST",
+            url: chatBox.find('#floatingChat').attr('action'),
+            data: formData,
+            success: function(response) {
+            // Convert the HTML string to a jQuery object
+            var responseHtml = $(response);
+            $('.loader').hide();
+
+            // Find the last 'other' class message in the response
+            var lastMessage = responseHtml.find('.floating-chat-messages li.other:last').text();
+
+            // Create the HTML for the message
+            var replyHtml = '<li class="other">' + lastMessage + '</li>';
+
+            // Append the message to your chat container
+            messagesContainer.append(replyHtml);
+            scrollToBottom();
+        },
+            error: function(xhr, status, error) {
+                console.error("Error in sending message: " + error);
+            }
+        });
+
+        chatBoxInput.empty();
+    }
+
+    // Bind event listeners specifically to elements within chatBox
+    chatBoxInput.on('keydown', function(e) {
+        if (e.keyCode == 13 && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    chatBox.find('#sendMessage').click(function(e) {
+        e.preventDefault();
+        sendMessage();
+    });
+});
+</script>
+
+{% endblock content %}

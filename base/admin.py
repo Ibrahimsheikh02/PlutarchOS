@@ -18,7 +18,7 @@ class CourseAdmin(admin.ModelAdmin):
 
     
 class UserAdmin(admin.ModelAdmin): 
-    list_display = ('username', 'email', 'expenditure', 'questions_asked')
+    list_display = ('email', 'first_name', 'expenditure', 'questions_asked')
 
 admin.site.register(User, UserAdmin)  
 admin.site.register(Course, CourseAdmin)
@@ -26,3 +26,4 @@ admin.site.register(Message)
 admin.site.register(Lecture)
 admin.site.register(LectureChatbot)
 admin.site.register(DiscussionMessages)
+admin.site.register(Slide_Messages)

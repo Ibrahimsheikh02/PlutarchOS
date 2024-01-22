@@ -1,56 +1,211 @@
 {% extends 'main.html' %}
 
-{% block content %}
+
 {% load static %}
-<link rel="stylesheet" type="text/css" href="{% static 'css/aboutstyle.css' %}">
-    <div class="container about">
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Plutarch </title>
 
-        <h1>LectureMe</h1>
-<br>
-<br>
-        <h2>Our Story</h2>
-        <p>
-        The dawn of AI giants like ChatGPT, Claude, and Bard marked a paradigm shift in the world of artificial intelligence. As industries worldwide raced to incorporate these revolutionary models, the discourse around the pros and cons of AI deepened. While artificial intelligence harbors enormous potential, unchecked deployment could lead to unforeseen consequences. Born from this realization, LectureMe was established to merge AI and education in a safe and responsible manner. Our ethos? Make learning interactive, universally accessible, and delightfully simple.
+    <!-- Font Awesome CDN -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+    />
+    <!--fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="header.css" />
+    <link rel="stylesheet" href="footer.css" />
+  </head>
+  <body>
+
+    <!---------------------------------------About page-------------------------------------->
+    <div class="about-section">
+      <div class="lectme-container">
+        <h1 class="story-heading">Our Story</h1>
+        <p class="text-block">
+          The dawn of AI giants like ChatGPT, Claude, and Bard marked a paradigm
+          shift in the world of artificial intelligence. As industries worldwide
+          raced to incorporate these revolutionary models, the discourse around
+          the pros and cons of AI deepened. While artificial intelligence
+          harbors enormous potential, unchecked deployment could lead to
+          unforeseen consequences. Born from this realization, Plutarch was
+          established to merge AI and education in a safe and responsible
+          manner. Our ethos? Make learning interactive, universally accessible,
+          and delightfully simple.
         </p>
+      </div>
 
-        <h2>Why?</h2>
-        <p>
-        The seed of our idea was sown when a dedicated professor at New York University pointed out a prevailing challenge: the incessant flood of emails in a professor’s inbox. Burdened with an array of questions about lectures, resources, and course content, professors were constantly juggling between teaching and responding. Thus, LectureMe was envisaged to serve as a bridge, enabling students to dive deeper into their lectures and hone their skills, while giving professors some much-needed breathing space.
+      <div class="lectme-container">
+        <h1 class="lectme-heading">Why Plutarch?</h1>
+        <p class="text-block">
+          The seed of our idea was sown when a professor at New York
+          University pointed out a prevailing challenge: the incessant flood of
+          emails in a professor’s inbox. Burdened with an array of questions
+          about lectures, resources, and course content, professors were
+          constantly juggling between teaching and responding. Thus, Plutarch
+          was envisaged to serve as a bridge, enabling students to dive deeper
+          into their lectures and hone their skills, while giving professors
+          some much-needed breathing space.
         </p>
+      </div>
 
-        <h2>Our Services</h2>
-        <strong>Interactive Chat:</strong>
-        <p>
-        Empower your learning experience with our chat feature. We've trained ChatGPT exclusively on your lecture materials, encompassing slides and transcripts. Pose your questions and get answers just as if you’re conversing with your professor. We ensure the AI retains the essence of your classroom, offering insights based on the exact content covered during lectures.
+      <div class="lectme-container">
+        <h1 class="story-heading">News</h1>
+        <p class="text-block">
+          We launched this initiative in Fall 2023. 
+          We started with one course, Principles of Data Science at the Undergraduate level
+          taught by Dr. Pascal Wallisch. 
+          In Spring 2024, we are expanding this service to three courses at New York University: <br>
+          1)  Principles of Data Science <br>
+          2) Fundamentals of Machine learning<br>
+          3) Abnormal Psychology
+
+          
         </p>
+      </div>
 
-        <strong>Strategic Study Plan:</strong>
-        <p>
-        With the lecture materials as our foundation, we craft an exhaustive study guide. This roadmap is tailored to pinpoint key takeaways and present a clear study trajectory, ensuring you grasp every intricate detail of the lecture.
-        </p>
-
-        <strong>Practice Quiz:</strong>
-        <p>
-        Augment your understanding with our AI-curated practice quizzes. Tailored for each lecture, these quizzes are invaluable tools for assessment preparation or a swift knowledge check.
-        </p>
-
-        <strong>Precision Transcript:</strong>
-        <p>
-        Our transcripts are a cut above the rest. Leveraging state-of-the-art speech-to-text models, we ensure accuracy and comprehensiveness, catering to students with a penchant for textual learning.
-        </p>
-
-        <h2>Meet The Team</h2>
-
-        <div id="team">
-            <h4>Ibrahim Sheikh, Founder</h4>
-            <p>
-                Ibrahim Sheikh is a senior at New York University, majoring in Computer Science and Data Science. Born in New York, he spent his formative years in Islamabad, Pakistan. At NYU, Ibrahim collaborates with Dr. Pascal Wallisch as a research assistant in the Fox Lab. His professional experience includes a machine learning-focused internship at Citi and roles at real estate firm One Constitution Avenue and as a student fundraiser.            </p>
-        <br>
-        <br>
+      <div class="lectme-container">
+        <h1 class="services-heading">Our Solutions</h1>
+        <div class="card-container">
+          <div class="main">
+            <h3>Interactive Chat</h3>
+            <div class="card">
+              <div class="card-wrapper">
+                <p>
+                  Elevate your learning experience with our interactive chat
+                  feature. Trained on your lecture materials, ChatGPT provides
+                  insights akin to conversing with your professor!
+                </p>
+              </div>
             </div>
-    </div>
-</body>
-</html>
+          </div>
+          <div class="main">
+            <h3>Interactive Slides</h3>
+            <div class="card">
+              <div class="card-wrapper">
+                <p>
+                  We take slide explanations a step further. We know students come 
+                  from all over the world and staying caught up can be difficult. 
+                  Our interactive slides enable students to ask questions, clarify
+                  concepts with a slide-specific explanation. 
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="main">
+            <h3>Practice Quiz</h3>
+            <div class="card">
+              <div class="card-wrapper">
+                <p>
+                  Enhance your understanding with our AI-curated practice
+                  quizzes tailored to each lecture. These quizzes serve as
+                  invaluable tools for assessment preparation and quick
+                  knowledge checks.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="main">
+            <h3>Precision Transcript</h3>
+            <div class="card">
+              <div class="card-wrapper">
+                <p>
+                  Our precise transcripts, generated using state-of-the-art
+                  speech-to-text models, offer comprehensive and accurate
+                  content, catering to students inclined towards textual
+                  learning.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
+      <div class="lectme-container">
+        <h1 class="founder-heading">Ibrahim Sheikh<span>, Founder</span></h1>
+        <p class="text-block founder-text">
+          Ibrahim Sheikh is a senior at New York University pursuing a joint major 
+          in Computer Science and Data Science. He currently works in Fox Lab under 
+          Dr. Pascal Wallisch and GRAIL Lab under the supervision of Dr. Lerrel Pinto. 
+          Previously, he has held internship positions at Citigroup and real-estate firms. 
+        </p>
+        <div class="founder-img-container">
+          <hr class="underline" />
+          <img
+            class="founder-img"
+
+            src="{% static '/images/founder--img.png' %}"
+            width="120"
+            height="120"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- <div class="footer-section">
+      <div class="container">
+        <div class="logo-row">
+          <img
+            class="footer-logo"
+            src="{% static '/images/logo-footer.svg' %}"
+            alt="footer-logo"
+          />
+          <p>For those passionate to learn</p>
+        </div>
+      </div>
+      <div class="container">
+        <div class="footer-menus">
+          <nav id="footer__nav" class="footer__nav">
+            <ul>
+              <li><a>Home</a></li>
+              <li><a>About</a></li>
+              <li><a>Courses</a></li>
+            </ul>
+          </nav>
+          <div class="newsletter">
+            <div class="newsletter-heading">Subscribe to our Newsletter</div>
+            <div class="newsletter-container">
+              <input
+                type="email"
+                class="form-field"
+                placeholder="Enter your email"
+              />
+              <button class="submit-button">Get Started</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="container p-b">
+        <nav class="footer-privacy-menu">
+          <ul>
+            <li><a>Privacy Policy</a></li>
+            <li><a>Terms & Conditions</li>
+            <li><a>Credits</a></li>
+          </ul>
+        </nav>
+      </div>
+      <div class="container seperator">
+        <div class="footer-website-name">
+          <a>© 2023 Lecture Me </a>
+          <a>Credits</a>
+        </div>
+      </div>
+    </div> -->
+
+    <script src="{% static '/css/custom.js' %}"></script>
+  </body>
+</html>
+<body></body>
 
 {% endblock content %}

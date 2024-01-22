@@ -20,8 +20,7 @@
         {% if message.is_user %}
             <p class="message-body"><strong>{{ message.user.username }}:</strong> {{ message.body|linebreaksbr }}</p>
             <p class="message-body"> {{message.timestamp}}</p>
-        {% else %}
-            <p class="message-body"><strong>LectureMe:</strong> {{ message.body|linebreaksbr }}</p>
+            <p class="message-body"><strong>LectureMe:</strong> {{ message.reply|linebreaksbr }}</p>
             <p class="message-body"> {{message.timestamp}}</p>
         {% endif %}
         <hr>

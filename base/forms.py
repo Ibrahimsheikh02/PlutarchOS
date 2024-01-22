@@ -20,7 +20,7 @@ class AddLecture (ModelForm):
     class Meta: 
         model = Lecture
         fields = '__all__'
-        exclude =  ['lecture_text', 'transcript_text', 'course', 'studyplan', 'practice_quiz']
+        exclude =  ['lecture_text', 'transcript_text', 'course', 'studyplan', 'practice_quiz', 'slides_text']
         
 
 class EditLecture (ModelForm): 
@@ -48,19 +48,20 @@ class EnrollStudentsForm(forms.ModelForm):
 class CustomUserCreationForm(UserCreationForm):
     class Meta:
         model = User
-        fields = ('username', 'password1', 'password2', 'email')
+        fields = ('first_name','last_name', 'password1', 'password2', 'email')
 
     def clean_email(self):
         email = self.cleaned_data.get('email')
         if email == "":
             raise forms.ValidationError("Email field cannot be blank")
         return email
+    
 
 
 class UsernameChangeForm (forms.ModelForm):
     class Meta: 
         model = User 
-        fields = ['username']
+        fields = ['first_name', 'last_name', 'relevant_pages']
 
 
 

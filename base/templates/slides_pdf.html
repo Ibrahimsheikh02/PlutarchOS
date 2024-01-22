@@ -1,0 +1,80 @@
+{% extends 'main.html' %}
+
+{% load static %}
+
+{% block content %}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+        .pdf-viewer-wrapper {
+            margin-top: 100px; /* This value should match your navbar's height */
+            height: calc(100vh - 100px); /* Subtracting the navbar height */
+            overflow: hidden;
+        }
+        .pdf-viewer-wrapper iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+    <title>PDF Viewer</title>
+</head>
+<body>
+
+<div class="pdf-viewer-wrapper">
+    <!-- The iframe embeds the full viewer.html. The 'file' query parameter is used to specify the PDF to view. -->
+    <iframe src="{% static 'web/viewer.html' %}?file=/pdf_proxy/{{ lecture.lecture_pdf.name }}" style="border: none;"></iframe>
+</div>
+<button id="sendPageNumberButton">Send Current Page Number</button>
+
+</body>
+</html>
+
+<script>
+    function getCurrentPageNumber() {
+        const viewer = document.querySelector('.pdf-viewer-wrapper iframe').contentWindow.PDFViewerApplication;
+        return viewer.page;
+    }
+
+    function sendPageNumberToServer(pageNumber) {
+        fetch("{% url 'update_page_number' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ page: pageNumber })
+        });
+    }
+
+    document.getElementById('sendPageNumberButton').addEventListener('click', function() {
+        let currentPage = getCurrentPageNumber();
+        sendPageNumberToServer(currentPage);
+    });
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+
+
+{% endblock content %}
