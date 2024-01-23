@@ -17,7 +17,7 @@ import dj_database_url
 import dotenv
 from urllib.parse import urlparse
 DJANGO_ENV = os.environ.get('DJANGO_ENV', 'local')  # 'local' will be default if not specified
-
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 # Load .env file for local development
@@ -58,7 +58,6 @@ ROOT_URLCONF = "lecturesgpt.urls"
 # SECURITY WARNING: don't run with debug turned on in production!
 
 if DJANGO_ENV == 'local':
-    DEBUG = True
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql_psycopg2',
@@ -101,7 +100,6 @@ if DJANGO_ENV == 'local':
 # Application definition
 
 if DJANGO_ENV == 'production':
-    DEBUG = False
     INSTALLED_APPS = [
         "base.apps.BaseConfig",
         "django.contrib.admin",
@@ -149,6 +147,7 @@ if DJANGO_ENV == 'production':
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+
 
 
 
