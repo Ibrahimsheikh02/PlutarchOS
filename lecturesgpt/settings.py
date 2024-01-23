@@ -230,3 +230,22 @@ GA_MEASUREMENT_ID = 'G-2ZGPZC9TEC'
 
 #python manage.py runserver 10.17.243.47:8000
 X_FRAME_OPTIONS = 'SAMEORIGIN'
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'level': 'ERROR',
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': True,
+        },
+    },
+}
