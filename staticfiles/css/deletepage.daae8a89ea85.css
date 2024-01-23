@@ -1,0 +1,50 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;  /* Light gray background to make the form pop */
+    height: 100vh;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;  /* These styles are to vertically and horizontally center the form */
+}
+
+form {
+    background-color: #fff;  /* White background */
+    padding: 30px;
+    border-radius: 8px;  /* Rounded corners */
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);  /* Drop shadow for a card-like appearance */
+    width: 100%;
+    max-width: 500px;  /* Max width to prevent the form from being too wide on large screens */
+}
+
+h1 {
+    font-size: 1.5em;
+    margin-bottom: 20px;  /* Add some space below the heading */
+    color: #333;
+}
+
+input[type="submit"] {
+    background-color: #e74c3c;  /* Reddish color for the delete button */
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;  /* Smooth transition for hover effect */
+}
+
+input[type="submit"]:hover {
+    background-color: #c0392b;  /* Slightly darker red for hover effect */
+}
+
+a {
+    display: inline-block;
+    margin-top: 20px;  /* Add some space above the link */
+    text-decoration: none;  /* Remove underline */
+    color: #3498db;  /* Blue color for link */
+    transition: color 0.3s;  /* Smooth transition for hover effect */
+}
+
+a:hover {
+    color: #2980b9;  /* Slightly darker blue for hover effect */
+}

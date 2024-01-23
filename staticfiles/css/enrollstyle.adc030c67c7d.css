@@ -1,0 +1,57 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    height: 100vh;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center; /* These styles vertically and horizontally center the form */
+}
+
+h1 {
+    font-size: 1.8em;
+    margin-bottom: 20px;  /* Spacing below the heading */
+    text-align: center;
+    color: #333;
+}
+
+form {
+    background-color: #fff;  /* White background */
+    padding: 30px;
+    border-radius: 8px;  /* Rounded corners */
+    box-shadow: 0 0 15px rgba(0,0,0,0.1);  /* Slight shadow for a card effect */
+    width: 100%;
+    max-width: 500px; /* Limits the width on larger screens */
+}
+
+button {
+    background-color: #3498db;  /* Blue color for the button */
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin-top: 20px;  /* Space above the button */
+    display: block;
+    width: 100%;
+}
+
+button:hover {
+    background-color: #2980b9;  /* Darker blue on hover */
+}
+
+/* If the form is rendered as paragraphs, add some spacing between them */
+form p {
+    margin-bottom: 15px;
+}
+
+/* Optional: Style input fields */
+input, select {
+    padding: 10px;
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+

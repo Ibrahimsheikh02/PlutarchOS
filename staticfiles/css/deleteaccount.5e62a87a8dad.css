@@ -1,0 +1,50 @@
+.delete-account-wrapper {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 30px;
+    background-color: #f7f7f7;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+h2 {
+    color: #333;
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+
+p {
+    margin-bottom: 30px;
+    font-size: 18px;
+    color: #666;
+}
+
+.delete-account-form {
+    margin-bottom: 20px;
+}
+
+.delete-button {
+    background-color: #e74c3c;
+    color: #fff;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.delete-button:hover {
+    background-color: #c0392b;
+}
+
+.go-back-link {
+    display: block;
+    color: #3498db;
+    font-size: 16px;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.go-back-link:hover {
+    color: #2980b9;
+}
