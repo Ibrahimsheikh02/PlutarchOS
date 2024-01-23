@@ -142,7 +142,7 @@ if DJANGO_ENV == 'production':
     dj_database_url.config(default=os.environ.get('DATABASE_URL'))
     
     }
-    ALLOWED_HOSTS = ['.herokuapp.com', 'www.lectureme.ai', 'lectureme.ai']
+    ALLOWED_HOSTS = ['.herokuapp.com', 'www.lectureme.ai', 'lectureme.ai', 'www.plutarch.us', 'plutarch.us']
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
