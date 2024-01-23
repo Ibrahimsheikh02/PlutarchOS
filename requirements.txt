@@ -99,4 +99,4 @@ whitenoise==6.5.0
 xarray==2023.1.0
 yarl==1.9.2
 zipp==3.16.2
-pdf2images==1.17.0
+pdf2image==1.17.0
