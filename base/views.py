@@ -76,7 +76,8 @@ import time
 import io
 import base64
 from pdf2image import convert_from_path
-
+from django.http import StreamingHttpResponse
+import re
 
 DJANGO_ENV = os.environ.get('DJANGO_ENV', 'local')
 openai.api_key = settings.OPENAI_API_KEY
@@ -299,20 +300,30 @@ def addLecture(request, pk):
 
                 pdf_url = generate_presigned_url('lectureme', lecture.lecture_pdf.name)
                 pdf_tmp_path = get_temp_file_from_s3(pdf_url)
-                text = extract_text(pdf_tmp_path)   
 
-                lecture.lecture_text = text
-                lecture.embeddings = create_embeddings(text)
+                if lecture.syllabus:
+                    text = extract_text(pdf_tmp_path)
+                if lecture.syllabus == False:
+                    text_as_list = process_full_pdf(pdf_tmp_path, lecture_name, course )
+                    text = "\n".join(text_as_list) 
+                    json_dict = {str(index + 1): value for index, value in enumerate(text_as_list)}
+                    lecture.slides_text = json_dict
+                    lecture_quiz = get_quiz_from_lecture_slides(text, lecture_name)
+                    lecture_quiz = str (lecture_quiz)
+                    pdf_quiz = save_text_to_pdf(lecture_quiz, lecture_name + "_quiz")
+                    lecture.practice_quiz.save(pdf_quiz.name, pdf_quiz, save=True)
+                
                 os.remove(pdf_tmp_path)
 
              if lecture.lecture_transcript:  # Check if lecture_transcript is not None
                 transcript_url = generate_presigned_url('lectureme', lecture.lecture_transcript.name)
                 transcript_tmp_path = get_temp_file_from_s3(transcript_url)
                 t_text = extract_text(transcript_tmp_path)
-
-                lecture.transcript_text = t_text
-                lecture.transcript_embeddings = create_embeddings(t_text)
+                text = text + t_text
                 os.remove(transcript_tmp_path)
+            
+             lecture.lecture_text = text
+             lecture.embeddings = create_embeddings(text)
 
              lecture.save()
              #if lecture.syllabus == False:
@@ -371,51 +382,127 @@ def editLecture(request, pk):
     context = {'form': form}
     return render(request, 'add_lecture.html', context)
 
-#GPT 4 VISION
-def encode_image(image):
+#GPT 4 VISION READING TEXT
+def encode_image(image, max_size_mb=20, quality=85):
+    # Convert to JPEG for consistency
     image_buffer = io.BytesIO()
-    image.save(image_buffer, format='jpeg')
+    image.save(image_buffer, format='JPEG', quality=quality)
     image_buffer.seek(0)
-    return base64.b64encode(image_buffer.getvalue()).decode('utf-8')
+    encoded_image = base64.b64encode(image_buffer.getvalue()).decode('utf-8')
 
-def process_pdf(pdf_path, start_page, end_page, lecture, course):
-    images = convert_from_path(pdf_path, first_page=start_page, last_page=end_page)
+    # Check size
+    if len(encoded_image) / 1e6 > max_size_mb:
+        if quality > 10:  # Prevent quality from going too low
+            return encode_image(image, max_size_mb, quality - 10)
+        else:
+            raise ValueError("Unable to compress image below 20 MB")
+
+    return encoded_image
+
+# def process_pdf(pdf_path, start_page, end_page, lecture_name, course):
+#     images = convert_from_path(pdf_path, first_page=start_page, last_page=end_page)
+#     messages = [{
+#         "role": "user",
+#         "content": [{
+#             "type": "text",
+#             "text": 
+# f"""
+# You are a visual PDF reader. You are given parts of a \
+# lecture titled {lecture_name} in a course titled {course.name}. \
+# Your job is to read the slide by returning everything RELEVANT written on the slide and \
+# explaining the illustration if there is one on the side. 
+# Try to be very detailed as students will use this to understand the lecture. \
+# Separate each description by using the format (THIS IS VERY IMPORTANT):
+# Slide #{start_page}: your response 
+# \n\n
+# Slide #{start_page+1}: your response
+# \n\n
+# etc.
+# """
+#         }]
+#     }]
+
+#     for page_num, image in enumerate(images, start=start_page):
+#         base64_image = encode_image(image)
+#         image_message = {
+#             "type": "image_url",
+#             "image_url": {
+#                 "url": f"data:image/jpeg;base64,{base64_image}",
+#                 "detail": "high"
+#             }
+#         }
+#         messages[0]["content"].append(image_message)
+
+#     response = openai.ChatCompletion.create(
+#         model="gpt-4-vision-preview",
+#         messages=messages,
+#         max_tokens=4000
+#     )
+#     return response.choices[0].message.content
+
+# def get_total_pages(pdf_path):
+#     with open(pdf_path, 'rb') as file:
+#         reader = PyPDF2.PdfReader(file)
+#         return len (reader.pages)
+    
+# def process_full_pdf(pdf_path, lecture_name, course):
+#     total_pages = get_total_pages (pdf_path)
+#     responses = ""
+#     for start_page in range(1, total_pages + 1, 5):
+#         end_page = min(start_page + 4, total_pages)
+#         response = process_pdf(pdf_path, start_page, end_page, lecture_name, course)
+#         responses = responses +'\n\n' + response
+#     return responses
+
+
+def process_pdf(pdf_path, page_number, lecture_name, course):
+    # Note: Now processing a single page at a time
+    image = convert_from_path(pdf_path, first_page=page_number, last_page=page_number)[0]
+    base64_image = encode_image(image)
+    
     messages = [{
         "role": "user",
         "content": [{
             "type": "text",
             "text": 
 f"""
-You are a visual PDF reader. You are given parts of a \
-lecture titled {lecture.name} in a course titled {course.name}. \
-Your job is to describe the slide by returning everything RELEVANT written on the slide or \
-explaning the illustration using the context. 
+You are a visual PDF reader. You are given part of a \
+lecture titled {lecture_name} in a course titled {course.name}. \
+Your job is to read the slide by returning everything RELEVANT written on the slide and \
+explaining the illustration if there is one on the side. 
 Try to be very detailed as students will use this to understand the lecture. \
-You are given five images. Return each with description with Page Number: Description. Then new line 
 """
-        }]
-    }]
-
-    for page_num, image in enumerate(images, start=start_page):
-        base64_image = encode_image(image)
-        image_message = {
+        }, {
             "type": "image_url",
             "image_url": {
                 "url": f"data:image/jpeg;base64,{base64_image}",
-                "detail": "high"
+                "detail": "auto"
             }
-        }
-        messages[0]["content"].append(image_message)
+        }]
+    }]
 
-    response = openai.chat.completions.create(
+    response = openai.ChatCompletion.create(
         model="gpt-4-vision-preview",
         messages=messages,
         max_tokens=4000
     )
-    return response
+    return response.choices[0].message.content
+
+def get_total_pages(pdf_path):
+    with open(pdf_path, 'rb') as file:
+        reader = PyPDF2.PdfReader(file)
+        return len(reader.pages)
+    
+def process_full_pdf(pdf_path, lecture_name, course):
+    total_pages = get_total_pages(pdf_path)
+    responses = []
+    for page_number in range(1, total_pages + 1):
+        response = process_pdf(pdf_path, page_number, lecture_name, course)
+        responses.append (response)
+    return responses
 
 
-
+#AWS
 def get_temp_file_from_s3(url):
     s3 = boto3.client('s3', aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY, region_name='us-east-2')
     bucket_name = 'lectureme'
@@ -433,6 +520,8 @@ def get_temp_file_from_s3(url):
     
     return tmp_file_name
 
+
+#lecture page (with tabs)
 @login_required (login_url = 'login')
 def view_lecture_content (request, pk):
     lecture = Lecture.objects.get (id = pk)
@@ -485,12 +574,13 @@ def slides_chatbot (request, lecture_id):
         course = Course.objects.get (lecture = lecture)
         message_context = [{"role" : "system", "content" : "You are a course tutor"}]
         question = request.POST.get('question')
+        page_num = request.POST.get('page_number')
+        page_num = int (page_num)
         for message in slides_messages:
             message_context.append([{'role':'user', 'content': message.body}])
             message_context.append([{'role':'system', 'content': message.reply}])
         message_context.append ([{'role': 'user', 'content': question}])
-        slides_desciptions = lecture.slides_text
-        page_num = 3
+        slides_desciptions =lecture.slides_text
         slide_in_question = slides_desciptions.get(str(page_num), None)
         slide_before_description = slides_desciptions.get(str(page_num - 1), None)
         slide_after_description = slides_desciptions.get(str(page_num + 1), None)
@@ -595,10 +685,9 @@ Again, please answer this question using the lecture material provided. IT IS VE
             request.user.save()
 
         Message.objects.create(user = request.user, course = course, lecture=lecture, body=question, reply = response)
-        messages = Message.objects.filter(lecture=lecture, user=request.user, is_deleted = False).order_by('-timestamp')[:50]
         messages = JsonResponse( { 'messages': response} )
-        context = {'lecture': lecture, 'messages': messages}
         return messages
+
 
 
 
@@ -752,7 +841,7 @@ def get_final_plan (studyplan, lecture_name):
     final_plan = response['choices'][0]['message']['content']
     return final_plan
 
-def save_text_to_pdf(text, file_name):
+def save_text_to_pdf(text, filename):
 
     if DJANGO_ENV == 'production':
     # Configuration for Heroku deployment
@@ -762,9 +851,10 @@ def save_text_to_pdf(text, file_name):
 
     # Convert string to PDF and save to in-memory file
     pdf_bytes = pdfkit.from_string(text, False, configuration=config)  # False means don't save to a file
-    pdf_buffer = BytesIO(pdf_bytes)
+    pdf_content = ContentFile(pdf_bytes)
+    pdf_content.name = filename  # Assign a filename
 
-    return pdf_buffer
+    return pdf_content
 
 
 #Quiz
@@ -821,6 +911,45 @@ def get_final_quiz (combined_quiz, lecture_name):
     response = openai.ChatCompletion.create(model='gpt-4', messages=conversation)
     quiz = response['choices'][0]['message']['content']
     return quiz
+
+
+def get_quiz_from_lecture_slides (slides_text, lecture_name):
+    conversation = [{'role': 'user', 'content': f"""
+                     
+                     
+You are given the description of the lecture slides for {lecture_name}. \
+Your task is to create a 10 questions multiple choice quiz \
+with 4 options of where 1 is correct for each question \
+based on the material provided. The difficulty should be high as these are college students. \
+Return an html format quiz which can be automatically converted to a PDF. 
+The title should be Quiz for {lecture_name}
+Please format the questions like this where the answers are at the end of the document.
+1) What's 2 + 2? 
+a) 3
+b) 4
+c) 5
+d) 6
+2) What's 3 + 3 
+a) 1
+b) 3
+c) 6
+d) 10
+
+Correct Responses
+1) b
+2) c
+
+etc. 
+ The lecture material is:\n {slides_text}
+"""}]
+    response = openai.ChatCompletion.create(model='gpt-4-1106-preview', messages=conversation)
+    response = response['choices'][0]['message']['content']
+
+    return response
+
+
+
+
 
 
 #This function creates both: Practice Quiz and Study Plan

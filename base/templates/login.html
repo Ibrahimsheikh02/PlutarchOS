@@ -52,7 +52,7 @@
                         <div class="error">{{ form.last_name.errors.as_text }}</div>
                     {% endif %}
                     
-                    <label for="{{ form.email.id_for_label }}">Email:</label>
+                    <label for="{{ form.email.id_for_label }}">Email [School Email]:</label>
                     {{ form.email }}
                     {% if form.email.errors %}
                         <div class="error">{{ form.email.errors.as_text }}</div>

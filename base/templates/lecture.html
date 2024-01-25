@@ -65,11 +65,12 @@
                 </li>
                 {% endif %}
                 <li class="last-tab">
-                  <img class="hidden-img" src= "{% static 'images/back-small.svg' %}"/>
-                  <a class="tab-back-page"
-                    ><img src="{% static 'images/back-btn.svg' %}" />Back to Lectures</a
-                  >
+                  <img class="hidden-img" src="{% static 'images/back-small.svg' %}"/>
+                  <a class="tab-back-page" href="javascript:void(0);" onclick="window.history.back();">
+                    <img src="{% static 'images/back-btn.svg' %}" />Back to Lectures
+                  </a>
                 </li>
+                
               </ul>
 
               <section id="tab-1" class="tab-body entry-content active active-content">
@@ -119,6 +120,7 @@
                 <div class="pdf-viewer-wrapper">
                   <iframe src="{% static 'web/viewer.html' %}?file=/pdf_proxy/{{ lecture.lecture_pdf.name }}" style="border: none;"></iframe>
                 </div>
+                {% if lecture.syllabus == False %}
                 <div class="floating-chat">
                   <i class="fa fa-comments" aria-hidden="true"></i>
                   <div class="chat">
@@ -146,13 +148,14 @@
                     </form>
                   </div>
                 </div>
+                {% endif %}
               </section>
-              
-
+            {% if lecture.lecture_transcript %}
               <section id="tab-5" class="tab-body entry-content">
                 <div class="pdf-viewer-wrapper">
-                  <iframe src="{% static 'web/viewer.html' %}?file=/pdf_proxy/{{ lecture.lecture_pdf.name }}" style="border: none;"></iframe>
+                  <iframe src="{% static 'web/viewer.html' %}?file=/pdf_proxy/{{ lecture.lecture_transcript.name }}" style="border: none;"></iframe>
               </section>
+              {% endif %}
             </div>
           </div>
         </div>
@@ -210,6 +213,14 @@
                 sendMessage();
             }
         });
+        
+        $('#chatForm').on('submit', function(e) {
+        e.preventDefault();
+        sendMessage();
+        });
+
+        
+
 
         // Send message function
         function sendMessage() {
@@ -263,8 +274,6 @@
 }
 
 
-        // Click event for the send button
-        $('.chat-button').click(sendMessage);
     });
 </script>
 
@@ -273,27 +282,29 @@
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script>
-    $(document).ready(function() {
-      var chatBox = $('#tab-4 .floating-chat'); // Scope everything to this specific chat box
-      var chatBoxInput = chatBox.find('.text-box'); // More specific selector
-      var messagesContainer = chatBox.find('.floating-chat-messages'); // More specific selector
+$(document).ready(function() {
+    var chatBox = $('#tab-4 .floating-chat');
+    var chatBoxInput = chatBox.find('.text-box');
+    var messagesContainer = chatBox.find('.floating-chat-messages');
+    var pdfViewerIframe = $('#tab-4 .pdf-viewer-wrapper iframe'); // Scoped selector for the iframe in tab-4
 
+    function scrollToBottom() {
+        messagesContainer.scrollTop(messagesContainer.prop("scrollHeight"));
+    }
 
-        function scrollToBottom() {
-            messagesContainer.scrollTop(messagesContainer.prop("scrollHeight"));
+    function getCurrentPageNumber() {
+        // Adjust this function based on your PDF.js configuration
+        try {
+            return pdfViewerIframe[0].contentWindow.PDFViewerApplication.page;
+        } catch (e) {
+            console.error("Error getting current page number: ", e);
+            return null; // Return null or a default value if unable to get the page number
         }
+    }
 
-        // Handling Enter key for message send
-        chatBoxInput.on('keydown', function(e) {
-            if (e.keyCode == 13 && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
-        });
-
-        scrollToBottom; 
     function sendMessage() {
         var message = chatBoxInput.text().trim();
+        var pageNumber = getCurrentPageNumber(); // Get the current page number
         if (!message) return;
 
         var userMessageHtml = '<li class="self">' + message + '</li>';
@@ -301,11 +312,11 @@
         $('.loader').show();
         scrollToBottom();
 
-        // AJAX call
         var csrfToken = chatBox.find('input[name="csrfmiddlewaretoken"]').val();
         var formData = {
             'csrfmiddlewaretoken': csrfToken,
-            'question': message
+            'question': message,
+            'page_number': pageNumber // Include the page number in the request
         };
 
         $.ajax({
@@ -313,20 +324,13 @@
             url: chatBox.find('#floatingChat').attr('action'),
             data: formData,
             success: function(response) {
-            // Convert the HTML string to a jQuery object
-            var responseHtml = $(response);
-            $('.loader').hide();
-
-            // Find the last 'other' class message in the response
-            var lastMessage = responseHtml.find('.floating-chat-messages li.other:last').text();
-
-            // Create the HTML for the message
-            var replyHtml = '<li class="other">' + lastMessage + '</li>';
-
-            // Append the message to your chat container
-            messagesContainer.append(replyHtml);
-            scrollToBottom();
-        },
+                var responseHtml = $(response);
+                $('.loader').hide();
+                var lastMessage = response.messages
+                var replyHtml = '<li class="other">' + lastMessage + '</li>';
+                messagesContainer.append(replyHtml);
+                scrollToBottom();
+            },
             error: function(xhr, status, error) {
                 console.error("Error in sending message: " + error);
             }
@@ -335,7 +339,6 @@
         chatBoxInput.empty();
     }
 
-    // Bind event listeners specifically to elements within chatBox
     chatBoxInput.on('keydown', function(e) {
         if (e.keyCode == 13 && !e.shiftKey) {
             e.preventDefault();
@@ -348,6 +351,7 @@
         sendMessage();
     });
 });
+
 </script>
 
 {% endblock content %}

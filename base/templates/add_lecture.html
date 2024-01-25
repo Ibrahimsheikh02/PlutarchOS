@@ -8,21 +8,38 @@
     <div class="login-form-container"> 
         <form method='POST' enctype="multipart/form-data" action=''>
             {% csrf_token %}
-            <div class="field-pair"> <!-- Starting the pair -->
+            <div class="field-pair">
                 {% for field in form %}
                     <div class="field-container">
                         <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                         {{ field }}
+                        {% if field|lower == "file" %}
+                            <span id="file-name" class="file-name-display"></span>
+                        {% endif %}
                     </div>
                     {% if forloop.counter|divisibleby:2 and not forloop.last %}
                         </div>
                         <div class="field-pair">
                     {% endif %}
                 {% endfor %}
-            </div> <!-- Closing the pair -->
+            </div>
             <input type="submit" value="Submit">
         </form>
     </div>
 </div>
 
 {% endblock content %}
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var fileInput = document.querySelector('.field-container input[type="file"]');
+        var fileNameDisplay = document.getElementById('file-name');
+
+        fileInput.addEventListener('change', function(event) {
+            if (event.target.files.length > 0) {
+                var fileName = event.target.files[0].name;
+                fileNameDisplay.textContent = "Selected file: " + fileName;
+            }
+        });
+    });
+</script>

@@ -93,3 +93,13 @@ input[type="submit"]:hover {
     cursor: pointer;
     margin-right: 10px;
     }
+
+.file-name-display {
+    display: inline-block;
+    margin-left: 10px;
+    font-size: 14px;
+    color: #555;
+    vertical-align: middle;
+}
+    
+    
