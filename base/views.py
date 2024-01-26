@@ -15,6 +15,7 @@ import openai
 from django.shortcuts import get_object_or_404
 from PyPDF2 import PdfReader
 import pickle
+from django_rq import enqueue
 from langchain.embeddings.openai import OpenAIEmbeddings
 from pdfminer.high_level import extract_text
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -283,6 +284,35 @@ def create_embeddings (text):
 
     return pickle.dumps(VectorStore)
 
+@job
+def process_pdf_background(lecture_id, pdf_tmp_path, lecture_name, course_id):
+    print ("I was called. ")
+    course = Course.objects.get(id = course_id)
+    lecture = Lecture.objects.get(id=lecture_id)
+    t_text = lecture.transcript_text
+
+    #1) Get PDF text and save
+    text_as_list = process_full_pdf(pdf_tmp_path, lecture_name, course)
+    text = "\n".join(text_as_list) 
+    text = text + t_text
+    lecture.lecture_text = text
+    lecture.embeddings = create_embeddings(text)
+    lecture.save()
+
+    #2) Get slides_text and save
+    json_dict = {str(index + 1): value for index, value in enumerate(text_as_list)}
+    lecture.slides_text = json_dict
+    lecture.save() 
+
+    lecture_quiz = get_quiz_from_lecture_slides(text, lecture_name)
+    lecture_quiz = str(lecture_quiz)
+    pdf_quiz = save_text_to_pdf(lecture_quiz, lecture_name + "_quiz")
+    lecture.practice_quiz.save(pdf_quiz.name, pdf_quiz, save=True)
+    
+    # Update the Lecture object
+    os.remove(pdf_tmp_path)
+    lecture.save()
+
 @login_required(login_url='login')       
 def addLecture(request, pk): 
     course = get_object_or_404(Course, id=pk)
@@ -296,40 +326,26 @@ def addLecture(request, pk):
              lecture = form.save(commit=False)
              lecture.course = course
              lecture.save()
-             if lecture.lecture_pdf:  # Check if lecture_pdf is not None
-
-                pdf_url = generate_presigned_url('lectureme', lecture.lecture_pdf.name)
-                pdf_tmp_path = get_temp_file_from_s3(pdf_url)
-
-                if lecture.syllabus:
-                    text = extract_text(pdf_tmp_path)
-                if lecture.syllabus == False:
-                    text_as_list = process_full_pdf(pdf_tmp_path, lecture_name, course )
-                    text = "\n".join(text_as_list) 
-                    json_dict = {str(index + 1): value for index, value in enumerate(text_as_list)}
-                    lecture.slides_text = json_dict
-                    lecture_quiz = get_quiz_from_lecture_slides(text, lecture_name)
-                    lecture_quiz = str (lecture_quiz)
-                    pdf_quiz = save_text_to_pdf(lecture_quiz, lecture_name + "_quiz")
-                    lecture.practice_quiz.save(pdf_quiz.name, pdf_quiz, save=True)
-                
-                os.remove(pdf_tmp_path)
 
              if lecture.lecture_transcript:  # Check if lecture_transcript is not None
                 transcript_url = generate_presigned_url('lectureme', lecture.lecture_transcript.name)
                 transcript_tmp_path = get_temp_file_from_s3(transcript_url)
                 t_text = extract_text(transcript_tmp_path)
-                text = text + t_text
+                lecture.transcript_text = t_text
                 os.remove(transcript_tmp_path)
-            
-             lecture.lecture_text = text
-             lecture.embeddings = create_embeddings(text)
+                lecture.save()
 
-             lecture.save()
-             #if lecture.syllabus == False:
-                #generate_quiz_debug.delay(pk=lecture.id)
-                #generate_study_plan_and_quiz.delay(lecture.id)
-                
+             if lecture.lecture_pdf:  # Check if lecture_pdf is not None
+                pdf_url = generate_presigned_url('lectureme', lecture.lecture_pdf.name)
+                pdf_tmp_path = get_temp_file_from_s3(pdf_url)
+                if lecture.syllabus:
+                    text = extract_text(pdf_tmp_path)
+                    lecture.lecture_text = text
+                    lecture.embeddings = create_embeddings(text)
+                    os.remove(pdf_tmp_path)
+                    lecture.save()
+                if lecture.syllabus == False:
+                    process_pdf_background.delay(lecture.id, pdf_tmp_path, lecture_name, course.id)
              return redirect ('lecturepage', pk = pk)
     context = {'form': form}
     return render(request, 'add_lecture.html', context)
@@ -493,6 +509,8 @@ def get_total_pages(pdf_path):
         reader = PyPDF2.PdfReader(file)
         return len(reader.pages)
     
+
+@job
 def process_full_pdf(pdf_path, lecture_name, course):
     total_pages = get_total_pages(pdf_path)
     responses = []
@@ -913,6 +931,7 @@ def get_final_quiz (combined_quiz, lecture_name):
     return quiz
 
 
+@job
 def get_quiz_from_lecture_slides (slides_text, lecture_name):
     conversation = [{'role': 'user', 'content': f"""
                      

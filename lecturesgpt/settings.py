@@ -94,7 +94,7 @@ if DJANGO_ENV == 'local':
             'HOST': 'localhost',
             'PORT': 6379,
             'DB': 0,
-            'DEFAULT_TIMEOUT': 1200,
+            'DEFAULT_TIMEOUT': 1800,
         },
     }
 
