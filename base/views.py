@@ -289,7 +289,13 @@ def process_pdf_background(lecture_id, pdf_tmp_path, lecture_name, course_id):
     print ("I was called. ")
     course = Course.objects.get(id = course_id)
     lecture = Lecture.objects.get(id=lecture_id)
-    t_text = lecture.transcript_text
+    if lecture.lecture_transcript:  # Check if lecture_transcript is not None
+        transcript_url = generate_presigned_url('lectureme', lecture.lecture_transcript.name)
+        transcript_tmp_path = get_temp_file_from_s3(transcript_url)
+        t_text = extract_text(transcript_tmp_path)
+        lecture.transcript_text = t_text
+        os.remove(transcript_tmp_path)
+        lecture.save()
 
     #1) Get PDF text and save
     text_as_list = process_full_pdf(pdf_tmp_path, lecture_name, course)
@@ -326,14 +332,6 @@ def addLecture(request, pk):
              lecture = form.save(commit=False)
              lecture.course = course
              lecture.save()
-
-             if lecture.lecture_transcript:  # Check if lecture_transcript is not None
-                transcript_url = generate_presigned_url('lectureme', lecture.lecture_transcript.name)
-                transcript_tmp_path = get_temp_file_from_s3(transcript_url)
-                t_text = extract_text(transcript_tmp_path)
-                lecture.transcript_text = t_text
-                os.remove(transcript_tmp_path)
-                lecture.save()
 
              if lecture.lecture_pdf:  # Check if lecture_pdf is not None
                 pdf_url = generate_presigned_url('lectureme', lecture.lecture_pdf.name)
