@@ -285,10 +285,12 @@ def create_embeddings (text):
     return pickle.dumps(VectorStore)
 
 @job
-def process_pdf_background(lecture_id, pdf_tmp_path, lecture_name, course_id):
+def process_pdf_background(lecture_id, lecture_name, course_id):
     print ("I was called. ")
     course = Course.objects.get(id = course_id)
     lecture = Lecture.objects.get(id=lecture_id)
+    pdf_url = generate_presigned_url('lectureme', lecture.lecture_pdf.name)
+    pdf_tmp_path = get_temp_file_from_s3(pdf_url)
     if lecture.lecture_transcript:  # Check if lecture_transcript is not None
         transcript_url = generate_presigned_url('lectureme', lecture.lecture_transcript.name)
         transcript_tmp_path = get_temp_file_from_s3(transcript_url)
@@ -334,16 +336,18 @@ def addLecture(request, pk):
              lecture.save()
 
              if lecture.lecture_pdf:  # Check if lecture_pdf is not None
-                pdf_url = generate_presigned_url('lectureme', lecture.lecture_pdf.name)
-                pdf_tmp_path = get_temp_file_from_s3(pdf_url)
                 if lecture.syllabus:
+                    pdf_url = generate_presigned_url('lectureme', lecture.lecture_pdf.name)
+                    pdf_tmp_path = get_temp_file_from_s3(pdf_url)
                     text = extract_text(pdf_tmp_path)
                     lecture.lecture_text = text
                     lecture.embeddings = create_embeddings(text)
                     os.remove(pdf_tmp_path)
                     lecture.save()
+                
                 if lecture.syllabus == False:
-                    process_pdf_background.delay(lecture.id, pdf_tmp_path, lecture_name, course.id)
+                    print ("Now Calling")
+                    process_pdf_background.delay(lecture.id, lecture_name, course.id)
              return redirect ('lecturepage', pk = pk)
     context = {'form': form}
     return render(request, 'add_lecture.html', context)
