@@ -6,8 +6,12 @@
 <div class="courses-section">
   <div class="container">
     <h1 class="courses-heading">Courses</h1>
+    {% if is_professor %}
+    <a href="{% url 'createCourse' %}" class="btn btn-primary">Create Course</a>
+    {% endif %}
   </div>
   <div class="container">
+
     {% for course in mycourses %}
     {% if request.user == course.created_by or request.user in course.enrolled.all %}
     <!-- Each course card is wrapped in an anchor tag -->
@@ -23,6 +27,12 @@
               {% else %}
                 Description not available.
               {% endif %}
+
+              {% if request.user == course.created_by %}
+              <a href="{% url 'updateCourse' course.id %}" class="lects-link">
+                  <p>Edit</p>
+              {% endif %}  
+
             </p>
             <span>{{ course.term }}</span>
           </div>
@@ -31,6 +41,7 @@
     </a>
     {% endif %}
     {% endfor %}
+
   </div>
 </div>
 

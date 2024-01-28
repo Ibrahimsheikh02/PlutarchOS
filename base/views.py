@@ -138,6 +138,7 @@ def signUp(request):
         form = CustomUserCreationForm(request.POST)
         if form.is_valid(): 
             user = form.save()
+            enroll_in_courses(user)
 
             # Assign user to a group, if necessary
             group = Group.objects.get(name='Student')
@@ -151,6 +152,17 @@ def signUp(request):
             messages.error(request, 'An error has occurred during registration')
 
     return render(request, 'login.html', context)
+
+
+def enroll_in_courses(user):
+    all_courses = Course.objects.all()
+    for course in all_courses:
+        if course.roster:
+            email_list = [email.strip().lower() for email in course.roster.split(',')]
+            if user.email.lower() in email_list:
+                course.enrolled.add(user)
+
+
 
 #Change password, username, delete account
 @login_required(login_url='login')
@@ -211,11 +223,24 @@ def createCourse(request):
             course.created_by = request.user
             course.save()
             form.save_m2m()  
+            enroll_students(course)
             return redirect('home')
     else:
         form = CourseForm()
     context = {'form': form}
     return render(request, 'create_course.html', context)
+
+
+def enroll_students(course):
+    if course.roster:
+        email_list = course.roster.split(',')  # Split the roster into a list of emails
+        for email in email_list:
+            try:
+                user = User.objects.get(email=email.strip())
+                course.enrolled.add(user)
+            except User.DoesNotExist:
+                pass  # Ignore if user does not exist
+
 
 @login_required(login_url='login')
 def updateCourse (request, pk): 
@@ -228,7 +253,8 @@ def updateCourse (request, pk):
     if request.method == 'POST':
         form = CourseForm(request.POST, instance=course)
         if form.is_valid(): 
-            form.save()
+            updated_course = form.save()
+            enroll_students(updated_course)
             return redirect ('home')
 
 
@@ -386,19 +412,31 @@ def cleanTranscript (transcript_chunks, lecture_name):
 def editLecture(request, pk):
     lecture = Lecture.objects.get(id=pk)
     course = lecture.course
-    form = EditLecture(instance=lecture)
-    
+
     if request.user != course.created_by:
         raise Http404("You are not allowed to edit this lecture")
+
+    form = EditLecture(instance=lecture)
     
     if request.method == 'POST':
-        form = EditLecture(request.POST, request.FILES, instance=lecture)  # Notice the request.FILES here
+        form = EditLecture(request.POST, request.FILES, instance=lecture)
         if form.is_valid():
-            form.save()
+            # Check if lecture text is changed
+            if 'lecture_text' in form.changed_data:
+                # Save the form first to update the lecture object
+                updated_lecture = form.save()
+
+                # Generate new embeddings
+                updated_lecture.embeddings = create_embeddings(updated_lecture.lecture_text)
+                updated_lecture.save()
+            else:
+                form.save()
+
             return redirect('lecturepage', pk=course.id)
         
     context = {'form': form}
-    return render(request, 'add_lecture.html', context)
+    return render(request, 'add_lecture.html', context)  # Assuming you have a separate template for editing
+
 
 #GPT 4 VISION READING TEXT
 def encode_image(image, max_size_mb=20, quality=85):

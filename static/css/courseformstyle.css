@@ -1,3 +1,6 @@
+.body { 
+    color: black; 
+}
 .form-container {
     display: flex;
     justify-content: center;
@@ -44,4 +47,9 @@ a {
 
 a:hover {
     color: #0056b3;
+}
+
+/* Add styles for form labels and inputs */
+form label, form input[type="text"], form textarea {
+    color: black;  /* This will set the text color to black */
 }

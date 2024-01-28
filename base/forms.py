@@ -27,7 +27,7 @@ class EditLecture (ModelForm):
     class Meta: 
         model = Lecture
         fields = '__all__'
-        exclude =  ['lecture_text', 'transcript_text', 'course']
+        exclude =  ['transcript_text', 'course']
         
 class EnrollStudentsForm(forms.ModelForm):
     class Meta:

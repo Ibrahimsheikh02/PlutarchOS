@@ -48,6 +48,7 @@ class Course(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     assistants = models.CharField(max_length=200, blank=True, null=True)
     term = models.CharField(max_length=200, null = True, blank = True)
+    roster = models.TextField(null=True, blank=True)
 
 
     class Meta: 
