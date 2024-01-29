@@ -312,11 +312,11 @@ def create_embeddings (text):
 
 @job
 def process_pdf_background(lecture_id, lecture_name, course_id):
-    print ("I was called. ")
     course = Course.objects.get(id = course_id)
     lecture = Lecture.objects.get(id=lecture_id)
     pdf_url = generate_presigned_url('lectureme', lecture.lecture_pdf.name)
     pdf_tmp_path = get_temp_file_from_s3(pdf_url)
+    t_text = ''
     if lecture.lecture_transcript:  # Check if lecture_transcript is not None
         transcript_url = generate_presigned_url('lectureme', lecture.lecture_transcript.name)
         transcript_tmp_path = get_temp_file_from_s3(transcript_url)
@@ -372,7 +372,6 @@ def addLecture(request, pk):
                     lecture.save()
                 
                 if lecture.syllabus == False:
-                    print ("Now Calling")
                     process_pdf_background.delay(lecture.id, lecture_name, course.id)
              return redirect ('lecturepage', pk = pk)
     context = {'form': form}
@@ -673,6 +672,7 @@ Try to give short responses unless otherwise specified by the user.
 
         Slide_Messages.objects.create(user=request.user, course=course, lecture=lecture, body=question, reply = response)
         request.user.questions_asked += 1
+        request.user.save() 
         return JsonResponse ({'messages': response})
 
 
@@ -734,14 +734,14 @@ Again, please answer this question using the lecture material provided. IT IS VE
 
         with get_openai_callback() as cb:
             cost = round ( Decimal (cb.total_cost), 10 ) 
-            print (cb.total_cost)
             completion_tokens = cb.total_tokens - cb.prompt_tokens
             request.user.question_asked_tokens += cb.prompt_tokens
             request.user.completion_tokens += completion_tokens
             request.user.expenditure += cost
             request.user.total_tokens += cb.total_tokens
             request.user.save()
-
+        request.user.questions_asked += 1
+        request.user.save() 
         Message.objects.create(user = request.user, course = course, lecture=lecture, body=question, reply = response)
         messages = JsonResponse( { 'messages': response} )
         return messages
