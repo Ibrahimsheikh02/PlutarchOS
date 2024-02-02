@@ -311,9 +311,12 @@ def create_embeddings (text):
     return pickle.dumps(VectorStore)
 
 @job
-def process_pdf_background(lecture_id, lecture_name, course_id):
+def process_pdf_background(form, lecture_id, lecture_name, course_id):
     course = Course.objects.get(id = course_id)
-    lecture = Lecture.objects.get(id=lecture_id)
+    lecture_name = form.instance.name
+    lecture = form.save(commit=False)
+    lecture.course = course
+    lecture.save()
     pdf_url = generate_presigned_url('lectureme', lecture.lecture_pdf.name)
     pdf_tmp_path = get_temp_file_from_s3(pdf_url)
     t_text = ''
@@ -356,24 +359,22 @@ def addLecture(request, pk):
     if request.method == 'POST':
         form = AddLecture(request.POST, request.FILES)
         if form.is_valid(): 
-             lecture_name = form.instance.name
-             lecture = form.save(commit=False)
-             lecture.course = course
-             lecture.save()
-
-             if lecture.lecture_pdf:  # Check if lecture_pdf is not None
-                if lecture.syllabus:
-                    pdf_url = generate_presigned_url('lectureme', lecture.lecture_pdf.name)
-                    pdf_tmp_path = get_temp_file_from_s3(pdf_url)
-                    text = extract_text(pdf_tmp_path)
-                    lecture.lecture_text = text
-                    lecture.embeddings = create_embeddings(text)
-                    os.remove(pdf_tmp_path)
-                    lecture.save()
-                
-                if lecture.syllabus == False:
-                    process_pdf_background.delay(lecture.id, lecture_name, course.id)
-             return redirect ('lecturepage', pk = pk)
+            if lecture.syllabus:
+                lecture_name = form.instance.name
+                lecture = form.save(commit=False)
+                lecture.course = course
+                lecture.save()
+                pdf_url = generate_presigned_url('lectureme', lecture.lecture_pdf.name)
+                pdf_tmp_path = get_temp_file_from_s3(pdf_url)
+                text = extract_text(pdf_tmp_path)
+                lecture.lecture_text = text
+                lecture.embeddings = create_embeddings(text)
+                os.remove(pdf_tmp_path)
+                lecture.save()
+            
+            else:
+                process_pdf_background.delay(form, lecture.id, lecture_name, course.id)
+            return redirect ('lecturepage', pk = pk)
     context = {'form': form}
     return render(request, 'add_lecture.html', context)
 
