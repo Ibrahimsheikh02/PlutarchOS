@@ -311,12 +311,10 @@ def create_embeddings (text):
     return pickle.dumps(VectorStore)
 
 @job
-def process_pdf_background(form, lecture_id, lecture_name, course_id):
+def process_pdf_background(lecture_id, course_id):
     course = Course.objects.get(id = course_id)
-    lecture_name = form.instance.name
-    lecture = form.save(commit=False)
-    lecture.course = course
-    lecture.save()
+    lecture = Lecture.objects.get (id = lecture_id)
+    lecture_name = lecture.name
     pdf_url = generate_presigned_url('lectureme', lecture.lecture_pdf.name)
     pdf_tmp_path = get_temp_file_from_s3(pdf_url)
     t_text = ''
@@ -358,9 +356,11 @@ def addLecture(request, pk):
     form = AddLecture()
     if request.method == 'POST':
         form = AddLecture(request.POST, request.FILES)
-        if form.is_valid(): 
+        if form.is_valid():
+            lecture = form.save(commit=False)
+            lecture.course = course
+            lecture.save() 
             if lecture.syllabus:
-                lecture_name = form.instance.name
                 lecture = form.save(commit=False)
                 lecture.course = course
                 lecture.save()
@@ -373,7 +373,7 @@ def addLecture(request, pk):
                 lecture.save()
             
             else:
-                process_pdf_background.delay(form, lecture.id, lecture_name, course.id)
+                process_pdf_background.delay(lecture.id, course.id)
             return redirect ('lecturepage', pk = pk)
     context = {'form': form}
     return render(request, 'add_lecture.html', context)
