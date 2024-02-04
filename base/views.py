@@ -80,6 +80,8 @@ from pdf2image import convert_from_path
 from django.http import StreamingHttpResponse
 import re
 
+import inspect
+
 DJANGO_ENV = os.environ.get('DJANGO_ENV', 'local')
 openai.api_key = settings.OPENAI_API_KEY
 openai_api_key = settings.OPENAI_API_KEY
@@ -425,10 +427,10 @@ def editLecture(request, pk):
             if 'lecture_text' in form.changed_data:
                 # Save the form first to update the lecture object
                 updated_lecture = form.save()
-
                 # Generate new embeddings
                 updated_lecture.embeddings = create_embeddings(updated_lecture.lecture_text)
                 updated_lecture.save()
+
             else:
                 form.save()
 
@@ -728,10 +730,10 @@ The user's new question is: {question}\
 Again, please answer this question using the lecture material provided. IT IS VERY IMPORTANT. 
 """     
         llm = ChatOpenAI(temperature = 0, max_tokens = 500, openai_api_key = openai_api_key, 
-                         model_name = model_name, streaming=False)
+                         model_name = model_name, streaming= True)
         chain = load_qa_chain(llm = llm, chain_type = "stuff")
         response = chain.run (input_documents = docs, question = question_context_slides)
-
+        
 
         with get_openai_callback() as cb:
             cost = round ( Decimal (cb.total_cost), 10 ) 
