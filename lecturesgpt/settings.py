@@ -156,7 +156,7 @@ if DJANGO_ENV == 'production':
                 redis_url.port,
                 {
                     "password": redis_url.password,
-                    "ssl": True,  # Confirm SSL usage
+                    "ssl": redis_url.scheme == "rediss"
                 }
             )],
         },
