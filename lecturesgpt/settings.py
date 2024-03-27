@@ -129,14 +129,24 @@ if DJANGO_ENV == 'production':
     ]
 
 
-    redis_url = os.environ.get('REDIS_URL')
-    redis_url = urlparse(redis_url)
+    redis_url_str = os.environ.get('REDIS_URL')
+    redis_url = urlparse(redis_url_str)
+
+    # Correctly format the Redis host configuration for CHANNEL_LAYERS
+    redis_channel_layer_host = (
+        redis_url.hostname, 
+        redis_url.port,
+        {
+            "password": redis_url.password,
+            "ssl": True  # Use SSL if the scheme indicates it
+        }
+    )
 
     CHANNEL_LAYERS = {
         'default': {
             'BACKEND': 'channels_redis.core.RedisChannelLayer',
             'CONFIG': {
-                "hosts": [redis_url],
+                "hosts": [redis_channel_layer_host],
             },
         },
     }
