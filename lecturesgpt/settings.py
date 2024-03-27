@@ -130,6 +130,7 @@ if DJANGO_ENV == 'production':
 
 
     redis_url = os.environ.get('REDIS_URL')
+    redis_url = urlparse(redis_url)
 
     CHANNEL_LAYERS = {
         'default': {
@@ -139,8 +140,6 @@ if DJANGO_ENV == 'production':
             },
         },
     }
-
-    redis_url = urlparse(redis_url)
 
     RQ_QUEUES = {
         'default': {
