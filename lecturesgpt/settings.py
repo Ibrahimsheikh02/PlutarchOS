@@ -140,17 +140,19 @@ if DJANGO_ENV == 'production':
         },
     }
 
-    # RQ_QUEUES = {
-    #     'default': {
-    #         'HOST': redis_url.hostname,
-    #         'PORT': redis_url.port,
-    #         'DB': 0,
-    #         'PASSWORD': redis_url.password,
-    #         'SSL': True,
-    #         'SSL_CERT_REQS': None,
-    #         'DEFAULT_TIMEOUT': 1200,
-    #     },
-    # }
+    redis_url = urlparse(redis_url)
+
+    RQ_QUEUES = {
+        'default': {
+            'HOST': redis_url.hostname,
+            'PORT': redis_url.port,
+            'DB': 0,
+            'PASSWORD': redis_url.password,
+            'SSL': True,
+            'SSL_CERT_REQS': None,
+            'DEFAULT_TIMEOUT': 1200,
+        },
+    }
 
     MIDDLEWARE = [
         "django.middleware.security.SecurityMiddleware",
