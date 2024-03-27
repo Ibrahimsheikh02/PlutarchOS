@@ -1,6 +1,5 @@
 from channels.generic.websocket import AsyncWebsocketConsumer
 import json
-from .models import Message, Lecture, Course
 from asgiref.sync import async_to_sync
 from asgiref.sync import sync_to_async
 import pickle
@@ -47,10 +46,12 @@ class YourStreamConsumer(AsyncWebsocketConsumer):
 
 
     def get_previous_messages(self, lecture, user):
+        from .models import Message, Lecture, Course
         return list(Message.objects.filter(lecture=lecture, user=user, is_deleted=False).order_by('-timestamp')[:5][::-1])
 
 
     async def chatbot (self, user, question, lecture_id):
+        from .models import Message, Lecture, Course
         lecture = await sync_to_async(Lecture.objects.get)(id=lecture_id)
         course = await sync_to_async(Course.objects.get) (lecture = lecture)
         channel_layer = get_channel_layer()
