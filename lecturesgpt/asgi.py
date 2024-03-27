@@ -18,10 +18,10 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'lecturesgpt.settings')
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
-    # "websocket": AuthMiddlewareStack(
-    #     URLRouter(
-    #         base.routing.websocket_urlpatterns
-    #     )
-    # ),
+    "websocket": AuthMiddlewareStack(
+        URLRouter(
+            base.routing.websocket_urlpatterns
+        )
+    ),
 })
 
