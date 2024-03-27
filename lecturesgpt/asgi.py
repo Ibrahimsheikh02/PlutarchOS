@@ -15,15 +15,17 @@ import base.routing
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'lecturesgpt.settings')
 django.setup()
-print ("Called ASGI")
 
-application = ProtocolTypeRouter({
-    "http": get_asgi_application(),
-    "websocket": AuthMiddlewareStack(
-        URLRouter(
-            base.routing.websocket_urlpatterns
-        )
-    ),
-})
 
-print ("called asgi")
+django_asgi_app = get_asgi_application()
+application = django_asgi_app 
+
+# application = ProtocolTypeRouter({
+#     "http": get_asgi_application(),
+#     "websocket": AuthMiddlewareStack(
+#         URLRouter(
+#             base.routing.websocket_urlpatterns
+#         )
+#     ),
+# })
+
