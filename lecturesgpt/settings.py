@@ -130,15 +130,22 @@ if DJANGO_ENV == 'production':
     redis_url = urlparse(os.environ.get("REDIS_URL"))
 
     CHANNEL_LAYERS = {
-        'default': {
-            'BACKEND': 'channels_redis.core.RedisChannelLayer',
-            'CONFIG': {
-                "hosts": [(redis_url.hostname, redis_url.port)],
-                "password": redis_url.password,
-                "ssl": redis_url.scheme == 'rediss',  # Use SSL if the URL scheme is 'rediss'
-            },
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [(
+                redis_url.hostname, 
+                redis_url.port,
+                {
+                    "password": redis_url.password,
+                    "ssl": True,
+                    # Consider carefully if you really need to disable SSL certificate verification:
+                    'ssl_cert_reqs': None,
+                }
+            )],
         },
-    }
+    },
+}
 
     RQ_QUEUES = {
         'default': {
