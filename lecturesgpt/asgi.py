@@ -14,15 +14,14 @@ from channels.auth import AuthMiddlewareStack
 import base.routing
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'lecturesgpt.settings')
-django.setup()
 
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
-    "websocket": AuthMiddlewareStack(
-        URLRouter(
-            base.routing.websocket_urlpatterns
-        )
-    ),
+    # "websocket": AuthMiddlewareStack(
+    #     URLRouter(
+    #         base.routing.websocket_urlpatterns
+    #     )
+    # ),
 })
 
