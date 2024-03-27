@@ -1,6 +1,6 @@
 from channels.generic.websocket import AsyncWebsocketConsumer
 import json
-from .models import User, Message, Lecture, Course
+from .models import Message, Lecture, Course
 from asgiref.sync import async_to_sync
 from asgiref.sync import sync_to_async
 import pickle
