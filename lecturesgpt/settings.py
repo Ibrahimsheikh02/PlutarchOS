@@ -126,8 +126,7 @@ if DJANGO_ENV == 'production':
         "channels"
         
     ]
-
-    redis_url = os.environ.get("REDIS_URL").replace("redis://", "rediss://")
+    redis_url = urlparse(os.environ.get("REDIS_URL"))
 
 
     CHANNEL_LAYERS = {
