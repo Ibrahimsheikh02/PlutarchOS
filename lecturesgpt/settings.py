@@ -127,20 +127,19 @@ if DJANGO_ENV == 'production':
         
     ]
 
-    redis_url = urlparse(os.environ.get("REDIS_URL"))
+    #redis_url = urlparse(os.environ.get("REDIS_URL"))
+    redis_url = "rediss://:p205f2b8b4b6becdaf2f9f5e5fdb8b8910d32210517a68a05bea07af0eb4d54f0@ec2-34-194-199-53.compute-1.amazonaws.com:31080"
 
     CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
             "hosts": [(
-                redis_url.hostname, 
-                redis_url.port,
+                "ec2-34-194-199-53.compute-1.amazonaws.com", 
+                31080,
                 {
-                    "password": redis_url.password,
+                    "password": "p205f2b8b4b6becdaf2f9f5e5fdb8b8910d32210517a68a05bea07af0eb4d54f0",
                     "ssl": True,
-                    # Consider carefully if you really need to disable SSL certificate verification:
-                    'ssl_cert_reqs': None,
                 }
             )],
         },
