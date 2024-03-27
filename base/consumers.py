@@ -5,7 +5,6 @@ from asgiref.sync import async_to_sync
 from asgiref.sync import sync_to_async
 import pickle
 import openai
-from openai import ChatCompletion
 from django.conf import settings
 from channels.layers import get_channel_layer
 import asyncio
