@@ -13,6 +13,7 @@ import asyncio
 
 openai.api_key = settings.OPENAI_API_KEY
 
+print ("calling consumers")
 class YourStreamConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.lecture_id = self.scope['url_route']['kwargs']['lecture_id']
@@ -139,3 +140,4 @@ class YourStreamConsumer(AsyncWebsocketConsumer):
         
         return 0
 
+print ("called consumers")

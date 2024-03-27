@@ -16,6 +16,8 @@ from decouple import Csv, config, Csv
 import dj_database_url
 import dotenv
 from urllib.parse import urlparse
+
+print ("calling settings")
 DJANGO_ENV = os.environ.get('DJANGO_ENV', 'local')  # 'local' will be default if not specified
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -273,3 +275,5 @@ LOGGING = {
         },
     },
 }
+
+print ("called settings")
