@@ -1,1 +1,1 @@
-web: gunicorn lecturesgpt.wsgi:application --log-file -
+web: daphne lecturesgpt.asgi:application --port $PORT --bind 0.0.0.0 -v2
