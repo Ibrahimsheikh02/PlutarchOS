@@ -127,36 +127,15 @@ if DJANGO_ENV == 'production':
         "channels"
         
     ]
-    
-    # Retrieve the Redis URL string from the environment variable
-    redis_url_str = os.environ.get("REDIS_URL")
-    redis_url = urlparse(redis_url_str)
 
-    # Determine whether to use SSL based on the URL scheme
-    use_ssl = redis_url.scheme == "rediss"
 
-    # Connect to Redis
-    try:
-        # Adjusted to explicitly pass SSL parameter based on the URL scheme
-        r = redis.Redis.from_url(redis_url_str, ssl=use_ssl)
-        r.ping()
-        print("Connection successful with SSL." if use_ssl else "Connection successful without SSL.")
-    except Exception as e:
-        print(f"Connection failed: {e}")
+    redis_url = os.environ.get('REDIS_URL')
 
     CHANNEL_LAYERS = {
         'default': {
             'BACKEND': 'channels_redis.core.RedisChannelLayer',
             'CONFIG': {
-                "hosts": [(
-                    redis_url.hostname, 
-                    redis_url.port,
-                    {
-                        "password": redis_url.password,
-                        # Ensure the "ssl" option is properly set based on the URL scheme
-                        "ssl": use_ssl
-                    }
-                )],
+                "hosts": [redis_url],
             },
         },
     }
