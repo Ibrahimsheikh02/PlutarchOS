@@ -16,6 +16,7 @@ from decouple import Csv, config, Csv
 import dj_database_url
 import dotenv
 from urllib.parse import urlparse
+import redis
 
 DJANGO_ENV = os.environ.get('DJANGO_ENV', 'local')  # 'local' will be default if not specified
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
@@ -127,6 +128,23 @@ if DJANGO_ENV == 'production':
         
     ]
     redis_url = urlparse(os.environ.get("REDIS_URL"))
+
+
+    # Try connecting with SSL
+    try:
+        r = redis.Redis.from_url(redis_url, ssl=True)
+        r.ping()
+        print("Connection successful with SSL.")
+    except Exception as e:
+        print(f"SSL connection failed: {e}")
+
+    # Try connecting without SSL
+    try:
+        r = redis.Redis.from_url(redis_url, ssl=False)
+        r.ping()
+        print("Connection successful without SSL.")
+    except Exception as e:
+        print(f"Non-SSL connection failed: {e}")
 
 
     CHANNEL_LAYERS = {
