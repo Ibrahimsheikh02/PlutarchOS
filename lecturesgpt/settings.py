@@ -127,12 +127,12 @@ if DJANGO_ENV == 'production':
         "channels"
         
     ]
-    redis_url = urlparse(os.environ.get("REDIS_URL"))
-
+    redis_url_str = os.environ.get("REDIS_URL")
+    redis_url = urlparse(redis_url_str)
 
     # Try connecting with SSL
     try:
-        r = redis.Redis.from_url(redis_url, ssl=True)
+        r = redis.Redis.from_url(redis_url_str, ssl=True)
         r.ping()
         print("Connection successful with SSL.")
     except Exception as e:
@@ -140,28 +140,27 @@ if DJANGO_ENV == 'production':
 
     # Try connecting without SSL
     try:
-        r = redis.Redis.from_url(redis_url, ssl=False)
+        r = redis.Redis.from_url(redis_url_str, ssl=False)
         r.ping()
         print("Connection successful without SSL.")
     except Exception as e:
         print(f"Non-SSL connection failed: {e}")
 
-
     CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            "hosts": [(
-                redis_url.hostname, 
-                redis_url.port,
-                {
-                    "password": redis_url.password,
-                    "ssl": redis_url.scheme == "rediss"
-                }
-            )],
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                "hosts": [(
+                    redis_url.hostname, 
+                    redis_url.port,
+                    {
+                        "password": redis_url.password,
+                        "ssl": redis_url.scheme == "rediss"
+                    }
+                )],
+            },
         },
-    },
-}
+    }
 
     RQ_QUEUES = {
         'default': {
