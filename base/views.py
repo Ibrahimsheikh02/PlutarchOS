@@ -14,6 +14,10 @@ from openai import ChatCompletion
 import openai
 from django.shortcuts import get_object_or_404
 from PyPDF2 import PdfReader
+from asgiref.sync import async_to_sync
+from asgiref.sync import sync_to_async
+from channels.layers import get_channel_layer
+from django.contrib.auth import get_user
 import pickle
 from django_rq import enqueue
 from langchain.embeddings.openai import OpenAIEmbeddings
@@ -23,6 +27,7 @@ from langchain.vectorstores import FAISS
 from langchain.chat_models import ChatOpenAI
 from langchain.chains.question_answering import load_qa_chain
 from langchain.callbacks import get_openai_callback
+from channels import layers
 from django.http import JsonResponse
 from django.utils import timezone
 from decimal import Decimal
@@ -355,17 +360,48 @@ def addLecture(request, pk):
     course = get_object_or_404(Course, id=pk)
     if request.user != course.created_by:
         raise Http404("You are not allowed to add this lecture")
-    form = AddLecture()
+    form = AddLecture()  # Assuming your form class is correctly named AddLectureForm
     if request.method == 'POST':
         form = AddLecture(request.POST, request.FILES)
         if form.is_valid():
             lecture = form.save(commit=False)
             lecture.course = course
-            lecture.save() 
-            if lecture.syllabus:
-                lecture = form.save(commit=False)
-                lecture.course = course
+            lecture.save()
+
+            # Process PDF if there's no syllabus, similar to what was done in process_pdf_background
+            if not lecture.syllabus:
+                lecture_name = lecture.name
+                pdf_url = generate_presigned_url('lectureme', lecture.lecture_pdf.name)
+                pdf_tmp_path = get_temp_file_from_s3(pdf_url)
+                t_text = ''
+                if lecture.lecture_transcript:
+                    transcript_url = generate_presigned_url('lectureme', lecture.lecture_transcript.name)
+                    transcript_tmp_path = get_temp_file_from_s3(transcript_url)
+                    t_text = extract_text(transcript_tmp_path)
+                    lecture.transcript_text = t_text
+                    os.remove(transcript_tmp_path)
+
+                #1) Get PDF text and save
+                text_as_list = process_full_pdf(pdf_tmp_path, lecture_name, course)
+                text = "\n".join(text_as_list) 
+                text = text + t_text
+                lecture.lecture_text = text
+                lecture.embeddings = create_embeddings(text)
+
+                #2) Get slides_text and save
+                json_dict = {str(index + 1): value for index, value in enumerate(text_as_list)}
+                lecture.slides_text = json_dict
+
+                lecture_quiz = get_quiz_from_lecture_slides(text, lecture_name)
+                lecture_quiz = str(lecture_quiz)
+                pdf_quiz = save_text_to_pdf(lecture_quiz, lecture_name + "_quiz")
+                lecture.practice_quiz.save(pdf_quiz.name, pdf_quiz, save=True)
+                
+                os.remove(pdf_tmp_path)
                 lecture.save()
+
+            # If there's a syllabus, just process the lecture PDF for text extraction and embeddings
+            else:
                 pdf_url = generate_presigned_url('lectureme', lecture.lecture_pdf.name)
                 pdf_tmp_path = get_temp_file_from_s3(pdf_url)
                 text = extract_text(pdf_tmp_path)
@@ -373,10 +409,8 @@ def addLecture(request, pk):
                 lecture.embeddings = create_embeddings(text)
                 os.remove(pdf_tmp_path)
                 lecture.save()
-            
-            else:
-                process_pdf_background.delay(lecture.id, course.id)
-            return redirect ('lecturepage', pk = pk)
+
+            return redirect('lecturepage', pk=pk)
     context = {'form': form}
     return render(request, 'add_lecture.html', context)
 
@@ -681,7 +715,7 @@ Try to give short responses unless otherwise specified by the user.
 
 
 @login_required(login_url='login')
-def chatbot(request, lecture_id):
+def chatbot_second(request, lecture_id):
     model_name = 'gpt-4-1106-preview'
     input_token_cost = 0.000001
     output_token_cost= 0.000002
@@ -717,6 +751,8 @@ def chatbot(request, lecture_id):
         if lecture.lecture_pdf is not None:
             embeddings = pickle.loads(lecture.embeddings)
             docs = embeddings.similarity_search(question, k=6)
+            for doc in docs: 
+                print (doc.page_content) 
 
         question_context_slides = f"""
 You are a course tutor for {course.name} and you are interacting with a student. \
@@ -729,12 +765,21 @@ Previous interaction: {previous_messages_content}. \
 The user's new question is: {question}\
 Again, please answer this question using the lecture material provided. IT IS VERY IMPORTANT. 
 """     
-        llm = ChatOpenAI(temperature = 0, max_tokens = 500, openai_api_key = openai_api_key, 
-                         model_name = model_name, streaming= True)
-        chain = load_qa_chain(llm = llm, chain_type = "stuff")
-        response = chain.run (input_documents = docs, question = question_context_slides)
-        
+        # llm = ChatOpenAI(temperature = 0, max_tokens = 500, openai_api_key = openai_api_key, 
+        #                  model_name = model_name, streaming= True)
+        # chain = load_qa_chain(llm = llm, chain_type = "stuff")
+        # response = chain.run (input_documents = docs, question = question_context_slides)
 
+        def openai_response_generator():
+            llm = ChatOpenAI(temperature=0, max_tokens=500, openai_api_key=openai_api_key, 
+                            model_name=model_name, streaming=True)
+            chain = load_qa_chain(llm=llm, chain_type="stuff")
+            response = chain.run(input_documents=docs, question=question_context_slides)
+            Message.objects.create(user = request.user, course = course, lecture=lecture, body=question, reply = response)
+            messages = JsonResponse( { 'messages': response} )
+            yield f"data: {response}\n\n"
+
+        
         with get_openai_callback() as cb:
             cost = round ( Decimal (cb.total_cost), 10 ) 
             completion_tokens = cb.total_tokens - cb.prompt_tokens
@@ -745,9 +790,120 @@ Again, please answer this question using the lecture material provided. IT IS VE
             request.user.save()
         request.user.questions_asked += 1
         request.user.save() 
-        Message.objects.create(user = request.user, course = course, lecture=lecture, body=question, reply = response)
-        messages = JsonResponse( { 'messages': response} )
-        return messages
+        # Message.objects.create(user = request.user, course = course, lecture=lecture, body=question, reply = response)
+        # messages = JsonResponse( { 'messages': response} )
+        
+        #return messages
+
+        return StreamingHttpResponse(openai_response_generator(), content_type="text/event-stream")
+
+
+def get_previous_messages(lecture, user):
+    return list(Message.objects.filter(lecture=lecture, user=user, is_deleted=False).order_by('-timestamp')[:5][::-1])
+
+async def chatbot (request, lecture_id):
+
+    
+    channel_layer = get_channel_layer()
+    group_name = f'chat_{lecture_id}'
+    model_name = 'gpt-4-1106-preview'
+    input_token_cost = 0.000001
+    output_token_cost= 0.000002
+    user = await sync_to_async(get_user)(request)
+    
+
+    if user.can_send_message == False:
+        response = 'You have exceeded the rate limit. Please contact the administration'
+        create_and_return_message(request.user, lecture.course, lecture, question, response, True)
+        messages = Message.objects.filter(lecture=lecture, user=request.user).order_by('-timestamp')[:50]
+        context = {'lecture': lecture, 'messages': messages}
+        return render(request, 'chat.html', context)
+
+
+
+
+    if request.method == 'POST':
+        question = request.POST.get('question')
+        lecture = await sync_to_async(Lecture.objects.get)(id=lecture_id)
+        course = await sync_to_async(Course.objects.get) (lecture = lecture)
+
+        
+
+        #Building Context
+        previous_messages = await sync_to_async(get_previous_messages)(lecture, user)
+        conversation = [{"role" : "system", "content" : "You are a helpful assistant"}]
+        for message in previous_messages:
+            role = "user" if message.is_user else "Assistant"
+            conversation.append({"role": role, "content": message.body})
+
+        previous_messages_content = "You are the 'Assistant' in this conversation.\n"
+
+        for messages in previous_messages:
+            previous_messages_content = previous_messages_content + "User: " + messages.body + "\n"
+            previous_messages_content = previous_messages_content + "Assistant: " + messages.reply + "\n"
+
+        if lecture.lecture_pdf is not None:
+            embeddings = pickle.loads(lecture.embeddings)
+            docs = embeddings.similarity_search(question, k=4) #Updated
+            docs_text = ""
+            for doc in docs:
+                docs_text += doc.page_content
+
+
+
+        question_context_slides = f"""
+You are a course tutor for {course.name} and you are interacting with a student. 
+This question is about a lecture titled {lecture.name}. 
+Your job is to answer the user's question by ONLY using the lecture material provided here as documents. 
+IT IS VERY IMPORTANT to ensure that you use the documents as much as possible.
+The question may be a new question or a follow up. 
+For reference, you are provided with the user's previous interaction with you. 
+Previous interaction: {previous_messages_content}. 
+The user's new question is: {question}
+The relevant lecture material is: {docs_text}
+Again, please answer this question using the lecture material provided. IT IS VERY IMPORTANT. 
+"""     
+        
+        conversation = [{"role": "user", "content": question_context_slides}]
+        response = openai.ChatCompletion.create (
+        model=model_name,
+        messages=conversation,
+        max_tokens=800, 
+        stream = True
+        )
+
+        full_response = ""
+        
+        for chunk in response:
+            choices = chunk.get('choices', [])
+            if choices:
+                first_choice = choices[0]
+                stop_reason = first_choice['finish_reason']
+                if isinstance(stop_reason, str) and stop_reason == 'stop':
+                    break
+                delta = first_choice.get('delta', {})
+                content = delta.get('content')
+                if content:
+                    # Send message to group
+                    await channel_layer.group_send(
+                        group_name,
+                        {
+                            'type': 'chat_message',
+                            'message': content
+                        }
+                    )
+
+                    full_response += content
+
+        await sync_to_async(Message.objects.create)(
+        user=request.user, 
+        course=course, 
+        lecture=lecture, 
+        body=question, 
+        reply=full_response
+    )
+        
+        return JsonResponse({'status': 'success', 'message': 'Message Complete'})
 
 
 

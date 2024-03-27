@@ -79,6 +79,7 @@ if DJANGO_ENV == 'local':
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     ]
     INSTALLED_APPS = [
+    "channels",
     "base.apps.BaseConfig",
     "django.contrib.admin",
     "django.contrib.auth",
@@ -97,6 +98,16 @@ if DJANGO_ENV == 'local':
             'DEFAULT_TIMEOUT': 1800,
         },
     }
+    CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+            "capacity": 1500,
+        },
+    },
+}
+
 
 # Application definition
 
@@ -111,10 +122,22 @@ if DJANGO_ENV == 'production':
         "django.contrib.staticfiles",
         "django_rq",
         "storages",
+        "channels"
         
     ]
 
     redis_url = urlparse(os.environ.get("REDIS_URL"))
+
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                "hosts": [(redis_url.hostname, redis_url.port)],
+                "password": redis_url.password,
+                "ssl": redis_url.scheme == 'rediss',  # Use SSL if the URL scheme is 'rediss'
+            },
+        },
+    }
 
     RQ_QUEUES = {
         'default': {
@@ -174,7 +197,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "lecturesgpt.wsgi.application"
-
+ASGI_APPLICATION = "lecturesgpt.asgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases

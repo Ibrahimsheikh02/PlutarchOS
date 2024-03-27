@@ -2,6 +2,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
 
 {% load static %}
+{% load text_filters %}
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/lecture.css' %}" />
     <div class="site-wrapper">
@@ -81,8 +82,8 @@
                     <div class="messages-container">
                         {% for message in messages %}
                         <div class="message-pair">
-                            <p class="user-message">{{ message.body|linebreaksbr }} </p>
-                            <p class="api-response">{{ message.reply|linebreaksbr }}</p>
+                            <p class="user-message">{{ message.body|bold_text|linebreaksbr }} </p>
+                            <p class="api-response">{{ message.reply|bold_text|linebreaksbr }}</p>
                         </div>
                         {% endfor %}
                     </div>
@@ -173,110 +174,109 @@
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script>
-    $(document).ready(function() {
-        var chatBoxInput = $('#chatBoxInput');
-        var chatBoxContainer = $('.chat-box');
-        var messagesContainer = $('.messages-container');
+$(document).ready(function() {
+    var chatBoxInput = $('#chatBoxInput');
+    var messagesContainer = $('.messages-container');
 
-        function scrollToBottom() {
+    function scrollToBottom() {
         messagesContainer.scrollTop(messagesContainer.prop("scrollHeight"));
     }
-    
 
+    function resizeTextarea(textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+    }
 
-        // Resize function for textarea
-        function resizeTextarea(textarea) {
-            textarea.style.height = 'auto';
-            textarea.style.height = (textarea.scrollHeight) + 'px';
-        }
-        
+    var wsStart = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+    var lectureId = "{{ lecture.id }}"; // Ensure this template variable is rendered correctly
+    var endpoint = wsStart + window.location.host + '/ws/chat/' + lectureId + '/';
+    var chatSocket;
 
-        // Initial and dynamic resize of textarea
-        resizeTextarea(chatBoxInput.get(0));
-        chatBoxInput.on('input', function() {
-            resizeTextarea(this);
-        });
-        scrollToBottom();
+    function escapeHtml(text) {
+        var map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
 
-        // Handling Enter key for message send and Shift+Enter for new line
-        chatBoxInput.on('keydown', function(e) {
-            if (e.keyCode == 13 && e.shiftKey) {
-                e.preventDefault();
-                // Logic for new line
-                var startPos = this.selectionStart;
-                var endPos = this.selectionEnd;
-                $(this).val($(this).val().substring(0, startPos)  + $(this).val().substring(endPos));
-                this.selectionStart = this.selectionEnd = startPos + 1;
-                resizeTextarea(this);
-            } else if (e.keyCode == 13) {
-                e.preventDefault();
-                sendMessage();
+    function formatMessage(message) {
+        // Escape HTML to prevent XSS and replace **text** with <strong>text</strong>
+        message = escapeHtml(message);
+        message = message.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        // Replace line breaks with <br>
+        return message.replace(/(\r\n|\n|\r)/gm, '<br>');
+    }
+
+    function connectWebSocket() {
+        chatSocket = new WebSocket(endpoint);
+
+        chatSocket.onopen = function(e) {
+            console.log('Chat WebSocket connected successfully.');
+        };
+
+        chatSocket.onmessage = function(e) {
+            var data = JSON.parse(e.data);
+            var message = formatMessage(data.message); // Use formatted message
+            if (!data.new_message && messagesContainer.find('.message-pair:last .api-response').length) {
+                messagesContainer.find('.message-pair:last .api-response').append(message);
+            } else {
+                messagesContainer.append($('<div>').addClass('message-pair').append($('<p>').addClass('api-response').html(message)));
             }
-        });
-        
-        $('#chatForm').on('submit', function(e) {
+            scrollToBottom();
+        };
+
+        chatSocket.onclose = function(e) {
+            console.error('Chat socket closed unexpectedly. Attempting to reconnect...');
+            setTimeout(connectWebSocket, 1000);
+        };
+
+        chatSocket.onerror = function(error) {
+            console.error('WebSocket error:', error);
+        };
+    }
+
+    function sendMessage() {
+        var message = chatBoxInput.val().trim();
+        if (message && chatSocket.readyState === WebSocket.OPEN) {
+            var userMessageHtml = '<div class="message-pair"><p class="user-message">' + formatMessage(message) + '</p></div>';
+            messagesContainer.append(userMessageHtml);
+            chatSocket.send(JSON.stringify({'message': message}));
+            chatBoxInput.val('');
+            resizeTextarea(chatBoxInput.get(0));
+            scrollToBottom();
+        } else {
+            console.log('WebSocket is not open. Cannot send message.');
+        }
+    }
+
+    chatBoxInput.on('input', function() {
+        resizeTextarea(this);
+    });
+
+    chatBoxInput.on('keydown', function(e) {
+        if (e.keyCode === 13 && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+
+    $('#chatForm').on('submit', function(e) {
         e.preventDefault();
         sendMessage();
-        });
-
-        
-
-
-        // Send message function
-        function sendMessage() {
-            var message = chatBoxInput.val().trim();
-            if (!message) return;
-
-            // Creating a container for both user message and API response
-            var messagePair = $('<div class="message-pair"></div>');
-            $('.loader').show();
-
-            // Append user message to the message pair container
-            var user_message_with_br = message.replace(/(\r\n|\n|\r)/gm, '<br>');
-            var userMessageHtml = '<p class="user-message">' + user_message_with_br + '</p>';
-            messagePair.append(userMessageHtml);
-            
-            // Append the message pair container to the messages container
-            $('.messages-container').append(messagePair);
-
-            setTimeout(scrollToBottom, 100);
-
-            // AJAX call for the API response
-            var csrfToken = $('input[name="csrfmiddlewaretoken"]').val();
-            var formData = {
-                'csrfmiddlewaretoken': csrfToken,
-                'question': message
-            };
-
-    $.ajax({
-        type: "POST",
-        url: "{% url 'chatbot' lecture.id %}", // Correct URL
-        data: formData,
-        success: function(response) {
-            $('.loader').hide();
-            var api_response = response.messages
-            var api_response = api_response.replace(/(\r\n|\n|\r)/gm, '<br>');
-            var api_response = api_response.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-            var replyHtml = '<p class="api-response"> ' + api_response + '</p>';
-          
-            messagePair.append(replyHtml); // Append API response to the same message pair container
-            chatBoxContainer.scrollTop(chatBoxContainer.prop("scrollHeight"));
-            scrollToBottom();
-        },
-        error: function(xhr, status, error) {
-            console.error("Error in sending message: " + error);
-        }
     });
 
-    chatBoxInput.val('');
-    resizeTextarea(chatBoxInput.get(0));
-    chatBoxContainer.scrollTop(chatBoxContainer.prop("scrollHeight"));
-}
+    connectWebSocket();
+    scrollToBottom();
+});
 
 
-    });
-</script>
-
+  </script>
+  
+  
 
 
 
