@@ -145,8 +145,6 @@ if DJANGO_ENV == 'production':
             "BACKEND": "channels_redis.core.RedisChannelLayer",
             "CONFIG": {
                 "hosts": [redis_url],
-                "ssl": None, 
-                "ssl_cert_reqs": None,
             },
         },
     }
