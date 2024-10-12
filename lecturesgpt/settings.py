@@ -145,11 +145,8 @@ if DJANGO_ENV == 'production':
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
             "hosts": [{
-                "host": redis_url.hostname,
-                "port": redis_url.port,
+                "address": (redis_url.hostname, redis_url.port),
                 "password": redis_url.password,
-                "ssl": True,
-                "ssl_cert_reqs": None,
             }],
         },
     },
@@ -163,8 +160,6 @@ if DJANGO_ENV == 'production':
             'PORT': redis_url.port,
             'DB': 0,
             'PASSWORD': redis_url.password,
-            'SSL': True,  # Enable SSL
-            'SSL_CERT_REQS': None,  # Disable SSL verification
             'DEFAULT_TIMEOUT': 1200,
         },
     }
