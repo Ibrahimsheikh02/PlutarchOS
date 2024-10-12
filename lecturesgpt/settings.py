@@ -17,7 +17,7 @@ import dj_database_url
 import dotenv
 from urllib.parse import urlparse
 import redis
-print ("Calling settings")
+
 DJANGO_ENV = os.environ.get('DJANGO_ENV', 'local')  # 'local' will be default if not specified
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -26,6 +26,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 env_file = os.path.join(BASE_DIR, '.env')
 if os.path.exists(env_file):
     dotenv.load_dotenv(env_file)
+
 
 
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
@@ -130,6 +131,7 @@ if DJANGO_ENV == 'production':
 
 
     redis_url = os.environ.get('REDIS_URL')
+    redis_url = urlparse(redis_url)
 
 
 
@@ -137,21 +139,25 @@ if DJANGO_ENV == 'production':
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            "hosts": [redis_url.replace('redis://', 'rediss://')],  # Enforce SSL
+            "hosts": [{
+                'address': f"rediss://{redis_url.hostname}:{redis_url.port}",
+                'password': redis_url.password,
+                'ssl': True,
+                'ssl_cert_reqs': None  # Disable SSL verification
+                }],
+            },
         },
-    },
-}
-    
-    redis_url = urlparse(redis_url.replace('redis://', 'rediss://'))
+    }
 
+# RQ Queues for background tasks
     RQ_QUEUES = {
         'default': {
             'HOST': redis_url.hostname,
             'PORT': redis_url.port,
             'DB': 0,
             'PASSWORD': redis_url.password,
-            'SSL': True,
-            'SSL_CERT_REQS': None,
+            'SSL': True,  # Enable SSL
+            'SSL_CERT_REQS': None,  # Disable SSL verification
             'DEFAULT_TIMEOUT': 1200,
         },
     }
@@ -278,5 +284,3 @@ LOGGING = {
         },
     },
 }
-
-print ("Called Settings")
