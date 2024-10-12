@@ -155,7 +155,7 @@ if DJANGO_ENV == 'production':
     },
 }
     
-    redis_url = urlparse(redis_url)
+
 # RQ Queues for background tasks
     RQ_QUEUES = {
         'default': {
