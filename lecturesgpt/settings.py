@@ -142,7 +142,10 @@ if DJANGO_ENV == 'production':
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
             "CONFIG": {
-                "hosts": [redis_url],
+                "hosts": [{
+                    "address": redis_url,
+                    "ssl_cert_reqs": ssl.CERT_NONE,  # Disable SSL certificate verification
+                }],
             },
         },
     }
@@ -152,6 +155,7 @@ if DJANGO_ENV == 'production':
         'default': {
             'URL': redis_url,
             'DEFAULT_TIMEOUT': 1200,
+            'SSL_CERT_REQS': ssl.CERT_NONE,  # Disable SSL certificate verification for RQ as well
         },
     }
 
