@@ -136,30 +136,21 @@ if DJANGO_ENV == 'production':
 ]
 
 
-
     redis_url = os.environ.get('REDIS_URL')
-    parsed_redis_url = urlparse(redis_url)
 
     CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [{
-                "address": (parsed_redis_url.hostname, parsed_redis_url.port),
-                "password": parsed_redis_url.password,
-            }],
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [redis_url],
+            },
         },
-    },
-}
-    
+    }
 
-# RQ Queues for background tasks
+    # RQ Queues for background tasks
     RQ_QUEUES = {
         'default': {
-            'HOST': parsed_redis_url.hostname,
-            'PORT': parsed_redis_url.port,
-            'DB': 0,
-            'PASSWORD': parsed_redis_url.password,
+            'URL': redis_url,
             'DEFAULT_TIMEOUT': 1200,
         },
     }
