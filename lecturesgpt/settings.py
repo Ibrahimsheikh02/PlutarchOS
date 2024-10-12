@@ -134,15 +134,15 @@ if DJANGO_ENV == 'production':
 
 
     CHANNEL_LAYERS = {
-        'default': {
-            'BACKEND': 'channels_redis.core.RedisChannelLayer',
-            'CONFIG': {
-                "hosts": [redis_url],
-            },
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [redis_url.replace('redis://', 'rediss://')],  # Enforce SSL
         },
-    }
+    },
+}
     
-    redis_url = urlparse(redis_url)
+    redis_url = urlparse(redis_url.replace('redis://', 'rediss://'))
 
     RQ_QUEUES = {
         'default': {
