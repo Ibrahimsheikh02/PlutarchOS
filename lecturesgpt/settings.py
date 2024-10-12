@@ -147,10 +147,8 @@ if DJANGO_ENV == 'production':
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
             "hosts": [{
-                'address': f"rediss://{redis_url.hostname}:{redis_url.port}",
+                'address': f"redis://{redis_url.hostname}:{redis_url.port}",
                 'password': redis_url.password,
-                'ssl': True,
-                'ssl_cert_reqs': None  # Disable SSL verification
                 }],
             },
         },
