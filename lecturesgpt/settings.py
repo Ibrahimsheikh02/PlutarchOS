@@ -154,6 +154,7 @@ if DJANGO_ENV == 'production':
             "hosts": [{
                 'address': f"rediss://{redis_url.hostname}:{redis_url.port}",
                 'password': redis_url.password,
+                'ssl_cert_reqs': ssl.CERT_NONE,
             }],
         },
     },
