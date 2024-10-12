@@ -136,16 +136,20 @@ if DJANGO_ENV == 'production':
 ]
 
 
-    redis_url = os.environ.get('REDIS_URL')
 
 
+    redis_url = urlparse(os.environ.get('REDIS_URL'))
 
     CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
             "hosts": [{
-                'address': os.environ['REDIS_URL'],  # Directly use the environment variable
+                "host": redis_url.hostname,
+                "port": redis_url.port,
+                "password": redis_url.password,
+                "ssl": True,
+                "ssl_cert_reqs": None,
             }],
         },
     },
