@@ -138,6 +138,11 @@ if DJANGO_ENV == 'production':
 
 
     redis_url = os.environ.get('REDIS_URL')
+
+    # Use 'rediss://' for a secure connection
+    if redis_url.startswith("redis://"):
+        redis_url = redis_url.replace("redis://", "rediss://")
+
     redis_url = urlparse(redis_url)
 
 
@@ -147,12 +152,14 @@ if DJANGO_ENV == 'production':
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
             "hosts": [{
-                'address': f"redis://{redis_url.hostname}:{redis_url.port}",
+                'address': f"rediss://{redis_url.hostname}:{redis_url.port}",
                 'password': redis_url.password,
-                }],
-            },
+            }],
         },
-    }
+    },
+}
+    
+    print (CHANNEL_LAYERS['default']['CONFIG']['hosts'])
 
 # RQ Queues for background tasks
     RQ_QUEUES = {
