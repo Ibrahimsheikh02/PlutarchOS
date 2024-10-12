@@ -134,7 +134,7 @@ if DJANGO_ENV == 'production':
     "https://lectureme-df4d6f65ea89.herokuapp.com",
     # Add more allowed domains as needed
 ]
-
+    
 
     redis_url = os.environ.get('REDIS_URL')
 
@@ -142,10 +142,7 @@ if DJANGO_ENV == 'production':
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
             "CONFIG": {
-                "hosts": [{
-                    "address": redis_url,
-                    "ssl_cert_reqs": ssl.CERT_NONE,  # Disable SSL certificate verification
-                }],
+                "hosts": [{"address": redis_url, "ssl_cert_reqs": ssl.CERT_NONE}],
             },
         },
     }
@@ -155,9 +152,10 @@ if DJANGO_ENV == 'production':
         'default': {
             'URL': redis_url,
             'DEFAULT_TIMEOUT': 1200,
-            'SSL_CERT_REQS': ssl.CERT_NONE,  # Disable SSL certificate verification for RQ as well
+            'SSL_CERT_REQS': ssl.CERT_NONE,
         },
     }
+
 
     MIDDLEWARE = [
         "django.middleware.security.SecurityMiddleware",
