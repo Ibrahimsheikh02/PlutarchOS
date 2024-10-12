@@ -154,7 +154,7 @@ if DJANGO_ENV == 'production':
             "hosts": [{
                 'address': f"rediss://{redis_url.hostname}:{redis_url.port}",
                 'password': redis_url.password,
-                'ssl_cert_reqs': ssl.CERT_NONE,
+                'ssl_cert_reqs': None,
             }],
         },
     },
@@ -164,16 +164,17 @@ if DJANGO_ENV == 'production':
 
 # RQ Queues for background tasks
     RQ_QUEUES = {
-        'default': {
-            'HOST': redis_url.hostname,
-            'PORT': redis_url.port,
-            'DB': 0,
-            'PASSWORD': redis_url.password,
-            'SSL': True,  # Enable SSL
-            'SSL_CERT_REQS': None,  # Disable SSL verification
-            'DEFAULT_TIMEOUT': 1200,
-        },
-    }
+    'default': {
+        'HOST': redis_url.hostname,
+        'PORT': redis_url.port,
+        'DB': 0,
+        'PASSWORD': redis_url.password,
+        'SSL': True,  # Enable SSL
+        'SSL_CERT_REQS': None,  # Disable SSL verification
+        'DEFAULT_TIMEOUT': 1200,
+    },
+}
+
 
     MIDDLEWARE = [
         "django.middleware.security.SecurityMiddleware",
