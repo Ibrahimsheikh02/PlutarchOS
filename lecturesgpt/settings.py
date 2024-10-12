@@ -137,36 +137,41 @@ if DJANGO_ENV == 'production':
     
 
     redis_url = os.environ.get('REDIS_URL')
+    parsed_redis_url = urlparse(redis_url)
 
-    # Create a custom SSL context
+    # Create a custom SSL context that doesn't verify certificates
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE
 
+    # Configuration for CHANNEL_LAYERS
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
             "CONFIG": {
                 "hosts": [{
-                    "address": redis_url,
-                    "ssl": ssl_context
+                    "host": parsed_redis_url.hostname,
+                    "port": parsed_redis_url.port,
+                    "password": parsed_redis_url.password,
+                    "ssl": True,
+                    "ssl_cert_reqs": None,
                 }],
             },
         },
     }
 
-    # RQ Queues for background tasks
+    # Configuration for RQ_QUEUES
     RQ_QUEUES = {
         'default': {
-            'URL': redis_url,
+            'HOST': parsed_redis_url.hostname,
+            'PORT': parsed_redis_url.port,
+            'DB': 0,
+            'PASSWORD': parsed_redis_url.password,
+            'SSL': True,
+            'SSL_CERT_REQS': None,
             'DEFAULT_TIMEOUT': 1200,
-            'CONNECTION_KWARGS': {
-                'ssl_cert_reqs': None,
-                'ssl': ssl_context
-            },
         },
     }
-
 
     MIDDLEWARE = [
         "django.middleware.security.SecurityMiddleware",
