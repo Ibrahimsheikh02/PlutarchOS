@@ -138,11 +138,19 @@ if DJANGO_ENV == 'production':
 
     redis_url = os.environ.get('REDIS_URL')
 
+    # Create a custom SSL context
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
             "CONFIG": {
-                "hosts": [{"address": redis_url, "ssl_cert_reqs": ssl.CERT_NONE}],
+                "hosts": [{
+                    "address": redis_url,
+                    "ssl": ssl_context
+                }],
             },
         },
     }
@@ -152,7 +160,10 @@ if DJANGO_ENV == 'production':
         'default': {
             'URL': redis_url,
             'DEFAULT_TIMEOUT': 1200,
-            'SSL_CERT_REQS': ssl.CERT_NONE,
+            'CONNECTION_KWARGS': {
+                'ssl_cert_reqs': None,
+                'ssl': ssl_context
+            },
         },
     }
 
