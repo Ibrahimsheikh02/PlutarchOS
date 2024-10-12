@@ -7,6 +7,8 @@ from django.conf import settings
 from channels.layers import get_channel_layer
 import asyncio
 openai.api_key = settings.OPENAI_API_KEY
+from asgiref.sync import sync_to_async
+
 
 class YourStreamConsumer(AsyncWebsocketConsumer):
     async def connect(self):
