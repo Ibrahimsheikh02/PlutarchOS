@@ -1,2 +1,2 @@
-web: gunicorn lecturesgpt.wsgi:application --timeout 120
+web: daphne lecturesgpt.asgi:application --port $PORT --bind 0.0.0.0 -v2
 worker: python manage.py rqworker
