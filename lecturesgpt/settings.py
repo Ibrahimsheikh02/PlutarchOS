@@ -136,25 +136,36 @@ if DJANGO_ENV == 'production':
 ]
     
 
-    import ssl
 
     redis_url = os.environ.get('REDIS_URL')
+    redis_url = urlparse(redis_url)
+
+
 
     CHANNEL_LAYERS = {
-        "default": {
-            "BACKEND": "channels_redis.core.RedisChannelLayer",
-            "CONFIG": {
-                "hosts": [redis_url],
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [{
+                'address': f"rediss://{redis_url.hostname}:{redis_url.port}",
+                'password': redis_url.password,
+                'ssl': True,
+                'ssl_cert_reqs': None  # Disable SSL verification
+                }],
             },
         },
     }
 
-    # RQ Queues for background tasks
+# RQ Queues for background tasks
     RQ_QUEUES = {
         'default': {
-            'URL': redis_url,
+            'HOST': redis_url.hostname,
+            'PORT': redis_url.port,
+            'DB': 0,
+            'PASSWORD': redis_url.password,
+            'SSL': True,  # Enable SSL
+            'SSL_CERT_REQS': None,  # Disable SSL verification
             'DEFAULT_TIMEOUT': 1200,
-            'SSL_CERT_REQS': None,
         },
     }
 
