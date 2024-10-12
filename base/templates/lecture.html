@@ -191,6 +191,7 @@ $(document).ready(function() {
     var lectureId = "{{ lecture.id }}"; // Ensure this template variable is rendered correctly
     var endpoint = wsStart + window.location.host + '/ws/chat/' + lectureId + '/';
     var chatSocket;
+    console.log("WebSocket connecting to:", endpoint);
 
     function escapeHtml(text) {
         var map = {

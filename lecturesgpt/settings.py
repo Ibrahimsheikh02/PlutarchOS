@@ -128,6 +128,11 @@ if DJANGO_ENV == 'production':
         "channels"
         
     ]
+    CORS_ALLOWED_ORIGINS = [
+    "https://plutarch.us",
+    "https://lectureme-df4d6f65ea89.herokuapp.com",
+    # Add more allowed domains as needed
+]
 
 
     redis_url = os.environ.get('REDIS_URL')
