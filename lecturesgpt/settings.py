@@ -17,6 +17,7 @@ import dj_database_url
 import dotenv
 from urllib.parse import urlparse
 import redis
+import ssl
 
 DJANGO_ENV = os.environ.get('DJANGO_ENV', 'local')  # 'local' will be default if not specified
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
@@ -136,7 +137,6 @@ if DJANGO_ENV == 'production':
 
 
     redis_url = os.environ.get('REDIS_URL')
-    redis_url = urlparse(redis_url)
 
 
 
@@ -145,15 +145,15 @@ if DJANGO_ENV == 'production':
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
             "hosts": [{
-                'address': f"rediss://{redis_url.hostname}:{redis_url.port}",
-                'password': redis_url.password,
+                'address': os.environ['REDIS_URL'],  # Directly use the environment variable
                 'ssl': True,
-                'ssl_cert_reqs': None  # Disable SSL verification
-                }],
-            },
+                'ssl_cert_reqs': ssl.CERT_NONE,  # Disable SSL verification (if needed)
+            }],
         },
-    }
-
+    },
+}
+    
+    redis_url = urlparse(redis_url)
 # RQ Queues for background tasks
     RQ_QUEUES = {
         'default': {
