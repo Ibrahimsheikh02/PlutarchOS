@@ -146,8 +146,6 @@ if DJANGO_ENV == 'production':
         'CONFIG': {
             "hosts": [{
                 'address': os.environ['REDIS_URL'],  # Directly use the environment variable
-                'ssl': True,
-                'ssl_cert_reqs': ssl.CERT_NONE,  # Disable SSL verification (if needed)
             }],
         },
     },
