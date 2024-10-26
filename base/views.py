@@ -661,7 +661,7 @@ def create_and_return_message(user, course, lecture, question_body, response_bod
 
 @login_required(login_url='login')
 def slides_chatbot (request, lecture_id): 
-    model = 'gpt-3.5-turbo'
+    model = "gpt-4o"
     if request.method == 'POST':
         lecture = Lecture.objects.get (id = lecture_id)
         slides_messages = Slide_Messages.objects.filter (lecture = lecture, user = request.user, is_deleted = False).order_by('-timestamp')[:5][::-1]
@@ -700,7 +700,7 @@ Try to give short responses unless otherwise specified by the user.
 """
         conversation = [{"role": "user", "content": message_to_send}]
         response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
+        model="gpt-4o",
         messages=conversation,
         max_tokens=300
     )
