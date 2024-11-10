@@ -41,6 +41,7 @@ from django.core.files import File
 from background_task import background
 import PyPDF2
 from reportlab.lib.utils import simpleSplit
+import django_rq
 import tiktoken
 from reportlab.lib.pagesizes import A4
 import openai
@@ -90,7 +91,7 @@ import inspect
 DJANGO_ENV = os.environ.get('DJANGO_ENV', 'local')
 openai.api_key = settings.OPENAI_API_KEY
 openai_api_key = settings.OPENAI_API_KEY
-openai_chat_model = "gpt-3.5-turbo"
+openai_chat_model = "gpt-4o"
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
 s3 = boto3.client('s3')
@@ -320,97 +321,69 @@ def create_embeddings (text):
 
 @job
 def process_pdf_background(lecture_id, course_id):
-    course = Course.objects.get(id = course_id)
-    lecture = Lecture.objects.get (id = lecture_id)
-    lecture_name = lecture.name
-    pdf_url = generate_presigned_url('lectureme', lecture.lecture_pdf.name)
-    pdf_tmp_path = get_temp_file_from_s3(pdf_url)
-    t_text = ''
-    if lecture.lecture_transcript:  # Check if lecture_transcript is not None
+    course = Course.objects.get(id=course_id)
+    lecture = Lecture.objects.get(id=lecture_id)
+    
+    # Handle transcript if exists
+    if lecture.lecture_transcript:
         transcript_url = generate_presigned_url('lectureme', lecture.lecture_transcript.name)
         transcript_tmp_path = get_temp_file_from_s3(transcript_url)
         t_text = extract_text(transcript_tmp_path)
         lecture.transcript_text = t_text
         os.remove(transcript_tmp_path)
-        lecture.save()
-
-    #1) Get PDF text and save
-    text_as_list = process_full_pdf(pdf_tmp_path, lecture_name, course)
-    text = "\n".join(text_as_list) 
-    text = text + t_text
+        
+    # Process PDF
+    pdf_url = generate_presigned_url('lectureme', lecture.lecture_pdf.name)
+    pdf_tmp_path = get_temp_file_from_s3(pdf_url)
+    
+    # Get PDF text and create embeddings
+    text_as_list = process_full_pdf(pdf_tmp_path, lecture.name, course)
+    text = "\n".join(text_as_list)
+    if lecture.transcript_text:
+        text = text + lecture.transcript_text
     lecture.lecture_text = text
     lecture.embeddings = create_embeddings(text)
-    lecture.save()
-
-    #2) Get slides_text and save
+    
+    # Save slides text
     json_dict = {str(index + 1): value for index, value in enumerate(text_as_list)}
     lecture.slides_text = json_dict
-    lecture.save() 
-
-    lecture_quiz = get_quiz_from_lecture_slides(text, lecture_name)
+    
+    # Generate and save quiz
+    lecture_quiz = get_quiz_from_lecture_slides(text, lecture.name)
     lecture_quiz = str(lecture_quiz)
-    pdf_quiz = save_text_to_pdf(lecture_quiz, lecture_name + "_quiz")
+    pdf_quiz = save_text_to_pdf(lecture_quiz, lecture.name + "_quiz")
     lecture.practice_quiz.save(pdf_quiz.name, pdf_quiz, save=True)
     
-    # Update the Lecture object
     os.remove(pdf_tmp_path)
     lecture.save()
-
+  
 @login_required(login_url='login')       
 def addLecture(request, pk): 
     course = get_object_or_404(Course, id=pk)
-    print ("Got Course")
     if request.user != course.created_by:
         raise Http404("You are not allowed to add this lecture")
-    form = AddLecture()  # Assuming your form class is correctly named AddLectureForm
+    
     if request.method == 'POST':
         form = AddLecture(request.POST, request.FILES)
         if form.is_valid():
-            print ("for valid")
             lecture = form.save(commit=False)
             lecture.course = course
             lecture.save()
 
-            # Process PDF if there's no syllabus, similar to what was done in process_pdf_background
+            # Instead of processing immediately, queue the job
             if not lecture.syllabus:
                 lecture_name = lecture.name
                 pdf_url = generate_presigned_url('lectureme', lecture.lecture_pdf.name)
-                print ("PDF url generated")
-                pdf_tmp_path = get_temp_file_from_s3(pdf_url)
-                print ("s3 received")
-                t_text = ''
-                if lecture.lecture_transcript:
-                    transcript_url = generate_presigned_url('lectureme', lecture.lecture_transcript.name)
-                    print ("transcriptURL")
-                    transcript_tmp_path = get_temp_file_from_s3(transcript_url)
-                    print ("transcript_temp_path")
-                    t_text = extract_text(transcript_tmp_path)
-                    print ("Extracted Text")
-                    lecture.transcript_text = t_text
-                    os.remove(transcript_tmp_path)
-
-                #1) Get PDF text and save
-                print ("Calling processFULL PDF")
-                text_as_list = process_full_pdf(pdf_tmp_path, lecture_name, course)
-                print ("Processed PDF")
-                text = "\n".join(text_as_list) 
-                text = text + t_text
-                lecture.lecture_text = text
-                lecture.embeddings = create_embeddings(text)
-
-                #2) Get slides_text and save
-                json_dict = {str(index + 1): value for index, value in enumerate(text_as_list)}
-                lecture.slides_text = json_dict
-
-                lecture_quiz = get_quiz_from_lecture_slides(text, lecture_name)
-                lecture_quiz = str(lecture_quiz)
-                pdf_quiz = save_text_to_pdf(lecture_quiz, lecture_name + "_quiz")
-                lecture.practice_quiz.save(pdf_quiz.name, pdf_quiz, save=True)
                 
-                os.remove(pdf_tmp_path)
-                lecture.save()
+                # Queue the processing job
+                django_rq.enqueue(process_pdf_background, 
+                                lecture.id,
+                                course.id,
+                                job_timeout='1h')  # Set appropriate timeout
 
-            # If there's a syllabus, just process the lecture PDF for text extraction and embeddings
+                return redirect('lecturepage', pk=pk)
+
+            # If there's a syllabus, just process the PDF for text extraction
             else:
                 pdf_url = generate_presigned_url('lectureme', lecture.lecture_pdf.name)
                 pdf_tmp_path = get_temp_file_from_s3(pdf_url)
@@ -449,7 +422,7 @@ def cleanTranscript (transcript_chunks, lecture_name):
             conversation.append({"role": "user", "content": f'Your last cleaned chunk for the same transcript was: {last_response}'})
             sleep (70)
 
-        response = openai.ChatCompletion.create(model='gpt-3.5-turbo-16k', messages=conversation)
+        response = openai.ChatCompletion.create(model='gpt-4o', messages=conversation)
         last_response = response['choices'][0]['message']['content']
         all_responses.append(last_response)
 
@@ -584,7 +557,7 @@ Try to be very detailed as students will use this to understand the lecture. \
     }]
 
     response = openai.ChatCompletion.create(
-        model="gpt-4-vision-preview",
+        model="gpt-4o",
         messages=messages,
         max_tokens=4000
     )
@@ -815,7 +788,7 @@ async def chatbot (request, lecture_id):
     
     channel_layer = get_channel_layer()
     group_name = f'chat_{lecture_id}'
-    model_name = 'gpt-4-1106-preview'
+    model_name = 'gpt-4o'
     input_token_cost = 0.000001
     output_token_cost= 0.000002
     user = await sync_to_async(get_user)(request)
@@ -986,7 +959,7 @@ def get_first_two_numbers(data_list):
 #Create a study plan (background task)
 
 
-model = 'gpt-3.5-turbo-16k'
+model = 'gpt-4o'
 
 def extract_text_from_pdf(pdf_path):
     with open(pdf_path, 'rb') as file:
