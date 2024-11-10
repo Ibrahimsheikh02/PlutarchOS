@@ -359,12 +359,14 @@ def process_pdf_background(lecture_id, course_id):
 @login_required(login_url='login')       
 def addLecture(request, pk): 
     course = get_object_or_404(Course, id=pk)
+    print ("Got Course")
     if request.user != course.created_by:
         raise Http404("You are not allowed to add this lecture")
     form = AddLecture()  # Assuming your form class is correctly named AddLectureForm
     if request.method == 'POST':
         form = AddLecture(request.POST, request.FILES)
         if form.is_valid():
+            print ("for valid")
             lecture = form.save(commit=False)
             lecture.course = course
             lecture.save()
@@ -373,17 +375,24 @@ def addLecture(request, pk):
             if not lecture.syllabus:
                 lecture_name = lecture.name
                 pdf_url = generate_presigned_url('lectureme', lecture.lecture_pdf.name)
+                print ("PDF url generated")
                 pdf_tmp_path = get_temp_file_from_s3(pdf_url)
+                print ("s3 received")
                 t_text = ''
                 if lecture.lecture_transcript:
                     transcript_url = generate_presigned_url('lectureme', lecture.lecture_transcript.name)
+                    print ("transcriptURL")
                     transcript_tmp_path = get_temp_file_from_s3(transcript_url)
+                    print ("transcript_temp_path")
                     t_text = extract_text(transcript_tmp_path)
+                    print ("Extracted Text")
                     lecture.transcript_text = t_text
                     os.remove(transcript_tmp_path)
 
                 #1) Get PDF text and save
+                print ("Calling processFULL PDF")
                 text_as_list = process_full_pdf(pdf_tmp_path, lecture_name, course)
+                print ("Processed PDF")
                 text = "\n".join(text_as_list) 
                 text = text + t_text
                 lecture.lecture_text = text
@@ -592,6 +601,7 @@ def process_full_pdf(pdf_path, lecture_name, course):
     total_pages = get_total_pages(pdf_path)
     responses = []
     for page_number in range(1, total_pages + 1):
+        print (f"PAGE NUMBER: {page_number}")
         response = process_pdf(pdf_path, page_number, lecture_name, course)
         responses.append (response)
     return responses
@@ -752,8 +762,6 @@ def chatbot_second(request, lecture_id):
         if lecture.lecture_pdf is not None:
             embeddings = pickle.loads(lecture.embeddings)
             docs = embeddings.similarity_search(question, k=6)
-            for doc in docs: 
-                print (doc.page_content) 
 
         question_context_slides = f"""
 You are a course tutor for {course.name} and you are interacting with a student. \
@@ -1265,7 +1273,6 @@ def view_slides(request, pk):
 def update_page_number(request):
     data = json.loads(request.body)
     page_number = data.get('page')
-    print (page_number)
     # Process the page number as needed
 
     return JsonResponse({'status': 'success'})
