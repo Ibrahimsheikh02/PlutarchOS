@@ -357,12 +357,14 @@ def process_pdf_background(lecture_id, course_id):
     os.remove(pdf_tmp_path)
     lecture.save()
   
+
+
 @login_required(login_url='login')       
 def addLecture(request, pk): 
     course = get_object_or_404(Course, id=pk)
     if request.user != course.created_by:
         raise Http404("You are not allowed to add this lecture")
-    
+    form = AddLecture()
     if request.method == 'POST':
         form = AddLecture(request.POST, request.FILES)
         if form.is_valid():
