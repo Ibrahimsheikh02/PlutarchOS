@@ -314,7 +314,7 @@ def create_embeddings (text):
     )
     chunks = text_splitter.split_text(text)
     embeddings = OpenAIEmbeddings(openai_api_key = openai_api_key, 
-                                  model = "text-embedding-3-small" )
+                                  model = "text-embedding-ada-002" )
     VectorStore = FAISS.from_texts(chunks, embeddings)
 
     return pickle.dumps(VectorStore)
