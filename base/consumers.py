@@ -55,7 +55,7 @@ class YourStreamConsumer(AsyncWebsocketConsumer):
         course = await sync_to_async(Course.objects.get) (lecture = lecture)
         channel_layer = get_channel_layer()
         group_name = f'chat_{lecture_id}'
-        model_name = 'gpt-4-1106-preview'
+        model_name = 'gpt-4o'
         input_token_cost = 0.000001
         output_token_cost= 0.000002
 
